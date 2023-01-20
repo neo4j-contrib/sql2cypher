@@ -1,0 +1,76 @@
+:toc:
+
+= Tests for column expressions
+
+These tests cover column expressions.
+
+== Arithmetic expressions
+
+The input
+
+[source,sql,id=t1_0,name=select_with_arithmetic]
+----
+SELECT 1 + 2, 1 - 2, 1 * 2, 1 / 2, square(2)
+----
+
+will be transpiled to
+
+[source,cypher,id=t1_0_expected]
+----
+RETURN (1 + 2), (1 - 2), (1 * 2), (1 / 2), (2 * 2)
+----
+
+== Numeric functions
+
+See https://neo4j.com/docs/cypher-manual/current/functions/mathematical-numeric/
+
+The input
+
+[source,sql,id=t2_0,name=select_with_mathematical_functions]
+----
+SELECT abs(1), ceil(1), floor(1), round(1), round(1, 1), sign(1)
+----
+
+will be transpiled to
+
+[source,cypher,id=t2_0_expected]
+----
+RETURN abs(1), ceil(1), floor(1), round(1), round(1, 1), sign(1)
+----
+
+== Logarithmic functions
+
+See https://neo4j.com/docs/cypher-manual/current/functions/mathematical-logarithmic/
+
+The input
+
+[source,sql,id=t3_0,name=select_with_logarithmic_functions]
+----
+SELECT exp(1), ln(1), log(2, 1), log10(1), sqrt(1)
+----
+
+will be transpiled to
+
+[source,cypher,id=t3_0_expected]
+----
+RETURN exp(1), log(1), (log(1) / log(2)), log10(1), sqrt(1)
+----
+
+
+== Trigonometric functions
+
+See https://neo4j.com/docs/cypher-manual/current/functions/mathematical-trigonometric/
+
+The input
+
+[source,sql,id=t4_0,name=select_with_trigonometric_functions]
+----
+SELECT acos(1), asin(1), atan(1), atan2(1, 2), cos(1), cot(1), degrees(1), pi(), radians(1), sin(1), tan(1)
+----
+
+will be transpiled to
+
+[source,cypher,id=t4_0_expected]
+----
+RETURN acos(1), asin(1), atan(1), atan2(1, 2), cos(1), cot(1), degrees(1), pi(), radians(1), sin(1), tan(1)
+----

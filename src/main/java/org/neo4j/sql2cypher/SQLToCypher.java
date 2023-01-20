@@ -46,14 +46,7 @@ import org.jooq.impl.DefaultConfiguration;
 import org.jooq.impl.QOM;
 import org.jooq.impl.QOM.TableAlias;
 
-import org.neo4j.cypherdsl.core.Condition;
-import org.neo4j.cypherdsl.core.Cypher;
-import org.neo4j.cypherdsl.core.Expression;
-import org.neo4j.cypherdsl.core.Node;
-import org.neo4j.cypherdsl.core.PatternElement;
-import org.neo4j.cypherdsl.core.ResultStatement;
-import org.neo4j.cypherdsl.core.SortItem;
-import org.neo4j.cypherdsl.core.StatementBuilder;
+import org.neo4j.cypherdsl.core.*;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithWhere;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
 import org.neo4j.cypherdsl.core.renderer.Configuration;
@@ -62,6 +55,7 @@ import org.neo4j.cypherdsl.core.renderer.Renderer;
 import static org.jooq.impl.DSL.createTable;
 import static org.jooq.impl.DSL.exp;
 import static org.jooq.impl.DSL.val;
+import static org.neo4j.cypherdsl.core.Functions.*;
 
 /**
  * Quick proof of concept of a jOOQ/Cypher-DSL based SQL to Cypher translator
@@ -187,6 +181,75 @@ public class SQLToCypher {
                 return Cypher.anonParameter(p.getValue());
         else if (f instanceof TableField<?, ?> tf)
             return lookupNode(tf.getTable()).property(tf.getName());
+        else if (f instanceof QOM.Add<?> e)
+            return expression(e.$arg1()).add(expression(e.$arg2()));
+        else if (f instanceof QOM.Sub<?> e)
+            return expression(e.$arg1()).subtract(expression(e.$arg2()));
+        else if (f instanceof QOM.Mul<?> e)
+            return expression(e.$arg1()).multiply(expression(e.$arg2()));
+        else if (f instanceof QOM.Square<?> e)
+            return expression(e.$arg1()).multiply(expression(e.$arg1()));
+        else if (f instanceof QOM.Div<?> e)
+            return expression(e.$arg1()).divide(expression(e.$arg2()));
+        else if (f instanceof QOM.Neg<?> e)
+            throw new IllegalArgumentException("unsupported: " + f);
+
+        // https://neo4j.com/docs/cypher-manual/current/functions/mathematical-numeric/
+        else if (f instanceof QOM.Abs<?> e)
+            return abs(expression(e.$arg1()));
+        else if (f instanceof QOM.Ceil<?> e)
+            return ceil(expression(e.$arg1()));
+        else if (f instanceof QOM.Floor<?> e)
+            return floor(expression(e.$arg1()));
+        else if (f instanceof QOM.Round<?> e)
+            if (e.$arg2() == null)
+                return round(expression(e.$arg1()));
+            else
+                return round(expression(e.$arg1()), expression(e.$arg2()));
+        else if (f instanceof QOM.Sign e)
+            return sign(expression(e.$arg1()));
+        else if (f instanceof QOM.Rand e)
+            return rand();
+
+        // https://neo4j.com/docs/cypher-manual/current/functions/mathematical-logarithmic/
+        else if (f instanceof QOM.Euler e)
+            return e();
+        else if (f instanceof QOM.Exp e)
+            return Functions.exp(expression(e.$arg1()));
+        else if (f instanceof QOM.Ln e)
+            return log(expression(e.$arg1()));
+        else if (f instanceof QOM.Log e)
+            return log(expression(e.$arg1())).divide(log(expression(e.$arg2())));
+        else if (f instanceof QOM.Log10 e)
+            return log10(expression(e.$arg1()));
+        else if (f instanceof QOM.Sqrt e)
+            return sqrt(expression(e.$arg1()));
+        // TODO: Hyperbolic functions
+
+        // https://neo4j.com/docs/cypher-manual/current/functions/mathematical-trigonometric/
+        else if (f instanceof QOM.Acos e)
+            return acos(expression(e.$arg1()));
+        else if (f instanceof QOM.Asin e)
+            return asin(expression(e.$arg1()));
+        else if (f instanceof QOM.Atan e)
+            return atan(expression(e.$arg1()));
+        else if (f instanceof QOM.Atan2 e)
+            return atan2(expression(e.$arg1()), expression(e.$arg2()));
+        else if (f instanceof QOM.Cos e)
+            return cos(expression(e.$arg1()));
+        else if (f instanceof QOM.Cot e)
+            return cot(expression(e.$arg1()));
+        else if (f instanceof QOM.Degrees e)
+            return degrees(expression(e.$arg1()));
+        else if (f instanceof QOM.Pi e)
+            return pi();
+        else if (f instanceof QOM.Radians e)
+            return radians(expression(e.$arg1()));
+        else if (f instanceof QOM.Sin e)
+            return sin(expression(e.$arg1()));
+        else if (f instanceof QOM.Tan e)
+            return tan(expression(e.$arg1()));
+
         else
             throw new IllegalArgumentException("unsupported: " + f);
     }

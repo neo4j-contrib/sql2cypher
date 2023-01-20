@@ -56,9 +56,14 @@ class SQLToCypherTest {
 	}
 
 	static Stream<Arguments> simple() throws Exception {
-		return getTestData("/simple.adoc").stream()
-			.map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings()));
 
+		// TODO: Automate file lookup?
+		return Stream.concat(
+			getTestData("/expressions.adoc").stream()
+				.map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings())),
+			getTestData("/simple.adoc").stream()
+				.map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings()))
+		);
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -89,8 +94,8 @@ class SQLToCypherTest {
 				.filter(b -> "sql".equals(b.getAttribute("language")))
 				.map(sqlBlock -> {
 					var name = (String) sqlBlock.getAttribute("name");
-					var sql = String.join(System.lineSeparator(), sqlBlock.getLines());
-					var cypher = String.join(System.lineSeparator(), blocks.get(sqlBlock.getId() + "_expected").getLines());
+					var sql = String.join("\n", sqlBlock.getLines());
+					var cypher = String.join("\n", blocks.get(sqlBlock.getId() + "_expected").getLines());
 					Map<String, String> tableMappings = new HashMap<>();
 					if (sqlBlock.getAttribute("table_mappings") != null) {
 						tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(","))
