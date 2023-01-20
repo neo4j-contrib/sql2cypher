@@ -1,0 +1,40 @@
+= Sql2Cypher Experimental Transpiler from SQL to Cypher
+
+This library is an experiment for converting SQL statements (first only read statements) to the appropriate Cypher equivalent.
+
+It is currently in a pre-alpha stage.
+
+== Example
+
+For example:
+
+[source,SQL]
+----
+SELECT t.a, t.b
+FROM my_table AS t
+WHERE t.a = 1
+----
+
+[source,Cypher]
+----
+MATCH (T:`MY_TABLE`) 
+WHERE T.A = 1 
+RETURN T.A, T.B
+----
+
+// More concrete examples can be found in the link:src/test/resources[TCK].
+
+== Build & Usage
+
+[source,shell]
+----
+./mvnw verify
+./mvnw package
+./target/assembly/bin/sql2cypher
+----
+
+== Dependencies
+
+* https://github.com/jOOQ[jOOQ - SQL DSL]
+* https://github.com/neo4j-contrib/cypher-dsl[cypher-dsl]
+* PicoCli
