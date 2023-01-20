@@ -102,6 +102,22 @@ public class SQLToCypher {
                     .withParseWithMetaLookups(ParseWithMetaLookups.IGNORE_ON_FAILURE)
                     .withDiagnosticsLogging(true);
         }
+
+        private Settings getJooqSettings() {
+            return jooqSettings.withParseDialect(sqlDialect);
+        }
+
+        private Map<String, String> getTableToLabelMappings() {
+            return tableToLabelMappings;
+        }
+
+        private SQLDialect getSqlDialect() {
+            return sqlDialect;
+        }
+
+        private Configuration getCypherDslConfig() {
+            return cypherDslConfig;
+        }
     }
     private final Map<Table<?>, Node> tables = new HashMap<>();
 
@@ -110,13 +126,13 @@ public class SQLToCypher {
     }
 
     private DSLContext configure(Config config) {
-        var jooqConfig = config.jooqSettings;
-        var dsl = DSL.using(config.sqlDialect, jooqConfig);
+        Settings jooqConfig = config.getJooqSettings();
+        DSLContext dsl = DSL.using(config.getSqlDialect(), jooqConfig);
         dsl.configuration().set(() -> {
-            var queries = config.tableToLabelMappings.entrySet()
-                .stream()
-                .map(e -> (Query) createTable(e.getKey()).comment("label=" + e.getValue()))
-                .toList();
+            var queries = config.getTableToLabelMappings().entrySet()
+                    .stream()
+                    .map(e -> (Query) createTable(e.getKey()).comment("label=" + e.getValue()))
+                    .toList();
             return dsl.meta(queries.toArray(Query[]::new));
         });
         return dsl;
