@@ -54,7 +54,7 @@
 			<id>mhunger</id>
 			<name>Michael Hunger</name>
 			<email>michael.hunger at neo4j.com</email>
-			<organization>Neo Technology</organization>
+			<organization>Neo4j, Inc.</organization>
 			<organizationUrl>https://neo4j.com</organizationUrl>
 			<roles>
 				<role>Developer</role>
@@ -65,7 +65,7 @@
 			<id>msimons</id>
 			<name>Michael Simons</name>
 			<email>michael.simons at neo4j.com</email>
-			<organization>Neo Technology</organization>
+			<organization>Neo4j, Inc.</organization>
 			<organizationUrl>https://neo4j.com</organizationUrl>
 			<roles>
 				<role>Developer</role>

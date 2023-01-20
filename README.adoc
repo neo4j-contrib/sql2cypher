@@ -22,7 +22,7 @@ WHERE T.A = 1
 RETURN T.A, T.B
 ----
 
-// More concrete examples can be found in the link:src/test/resources[TCK].
+More concrete examples can be found in the link:src/test/resources[TCK].
 
 == Build & Usage
 

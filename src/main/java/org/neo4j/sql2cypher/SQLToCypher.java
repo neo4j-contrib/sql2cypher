@@ -44,8 +44,6 @@ import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
 import org.neo4j.cypherdsl.core.renderer.Configuration;
 import org.neo4j.cypherdsl.core.renderer.Renderer;
 
-import static org.jooq.impl.DSL.createTable;
-
 /**
  * Quick proof of concept of a jOOQ/Cypher-DSL based SQL to Cypher translator
  * @author Lukas Eder
@@ -53,29 +51,80 @@ import static org.jooq.impl.DSL.createTable;
  */
 public class SQLToCypher {
 
+
     public static void main(String[] args) {
-        System.out.println(new SQLToCypher().convert("""
+        System.out.println(new SQLToCypher().using(new Config()).convert("""
             SELECT t.a, t.b
             FROM my_table AS t
             WHERE t.a = 1
             """));
     }
 
-    // Meta data can be added via .meta(createTable("t").column("a", SQLDataType.INTEGER))
-    private final Parser parser = DSL.using(SQLDialect.DEFAULT).parser();
-    private final Renderer renderer = Renderer.getRenderer(Configuration.prettyPrinting());
-    private final Map<Table<?>, Node> tables = new HashMap<>();
+    private Config config = new Config();
+
+    static class Context {
+        private final Map<Table<?>, Node> tables = new HashMap<>();
+
+        void addTable(Table<?> table, Node node) {
+            this.tables.put(table,node);
+        }
+
+        private Node getNode(Table<?> t) {
+            return tables.get(t);
+        }
+    }
+
+    static class Config {
+        private final SQLDialect dialect;
+        private final Configuration cypherDslConfig;
+
+        public Config() {
+            this.dialect = SQLDialect.DEFAULT;
+            this.cypherDslConfig = Configuration.prettyPrinting();
+        }
+
+        public Config(SQLDialect dialect, Configuration cypherDslConfig) {
+            this.dialect = dialect;
+            this.cypherDslConfig = cypherDslConfig;
+        }
+
+        public SQLDialect getDialect() {
+            return dialect;
+        }
+
+        public Configuration getCypherDslConfig() {
+            return cypherDslConfig;
+        }
+    }
+    public SQLToCypher using(Config config) {
+        this.config = config;
+        return this;
+    }
 
     // Unsure how thread safe this should be (wrt the node lookup table), but this here will do for the purpose of adding some tests
     public String convert(String sql) {
-        Select<?> query = parser.parseSelect(sql);
-        return renderer.render(statement(query));
+        Context ctx = new Context();
+        Select<?> query = parse(sql);
+        ResultStatement statement = statement(query, ctx);
+        return render(statement);
     }
 
-    private ResultStatement statement(Select<?> x) {
+    Select<?> parse(String sql) {
+        Parser parser = DSL.using(config.getDialect()).parser();
+        return parser.parseSelect(sql);
+    }
+
+    String render(ResultStatement statement) {
+        var renderer = Renderer.getRenderer(config.getCypherDslConfig());
+        return renderer.render(statement);
+    }
+
+    ResultStatement statement(Select<?> x, Context ctx) {
 
         // Done lazy as otherwise the property containers won't be resolved
-        Supplier<List<Expression>> resultColumnsSupplier = () -> x.$select().stream().map(t -> (Expression) expression(t)).toList();
+        Supplier<List<Expression>> resultColumnsSupplier =
+                () -> x.$select().stream()
+                        .map(t -> (Expression) expression(t, ctx)).toList();
 
         if (x.$from().isEmpty()) {
             return Cypher.returning(resultColumnsSupplier.get()).build();
@@ -84,34 +133,34 @@ public class SQLToCypher {
         OngoingReadingWithoutWhere m1 = Cypher
             .match(x.$from().stream().map(t -> {
                 Node node = node(t);
-                tables.put(t, node);
+                ctx.addTable(t, node);
                 return (PatternElement) node;
             }).toList());
 
         OngoingReadingWithWhere m2 = x.$where() != null
-             ? m1.where(condition(x.$where()))
+             ? m1.where(condition(x.$where(), ctx))
              : (OngoingReadingWithWhere) m1;
 
         return m2.returning(resultColumnsSupplier.get()).build();
     }
 
-    private Expression expression(SelectFieldOrAsterisk t) {
+    private Expression expression(SelectFieldOrAsterisk t, Context ctx) {
         if (t instanceof SelectField<?> s)
-            return expression(s);
+            return expression(s, ctx);
         else
             throw new IllegalArgumentException("unsupported: " + t);
     }
 
-    private Expression expression(SelectField<?> s) {
-        if (s instanceof QOM.FieldAlias<?> fa && fa.$alias() != null)
-            return expression(fa.$aliased()).as(fa.$alias().last());
+    private Expression expression(SelectField<?> s, Context ctx) {
+        if (s instanceof QOM.FieldAlias<?> fa)
+            return expression(fa.$aliased(), ctx).as(fa.$alias().last());
         else if (s instanceof Field<?> f)
-            return expression(f);
+            return expression(f, ctx);
         else
             throw new IllegalArgumentException("unsupported: " + s);
     }
 
-    private Expression expression(Field<?> f) {
+    private Expression expression(Field<?> f, Context ctx) {
         if (f instanceof Param<?> p)
             if (p.$inline())
                 return Cypher.literalOf(p.getValue());
@@ -119,41 +168,37 @@ public class SQLToCypher {
                 return Cypher.parameter(p.getParamName(), p.getValue());
             else
                 return Cypher.anonParameter(p.getValue());
-        else if (f instanceof TableField<?, ?> tf)
-            return lookupNode(tf.getTable()).property(tf.getName());
+        else if (f instanceof TableField<?, ?> tf) {
+            Table<?> t = tf.getTable();
+            return lookupNode(t, ctx).property(tf.getName());
+        }
         else
             throw new IllegalArgumentException("unsupported: " + f);
     }
 
-    private Condition condition(org.jooq.Condition c) {
-        if (c instanceof QOM.And a)
-            return condition(a.$arg1()).and(condition(a.$arg2()));
-        else if (c instanceof QOM.Or o)
-            return condition(o.$arg1()).or(condition(o.$arg2()));
-        else if (c instanceof QOM.Eq<?> e)
-            return expression(e.$arg1()).eq(expression(e.$arg2()));
-        else
-            throw new IllegalArgumentException("unsupported: " + c);
-    }
-
-    private Node node(Table<?> t) {
-        if (t instanceof TableAlias<?> ta && ta.$alias() != null)
-            return node(ta.$aliased()).named(ta.$alias().last());
-        else
-            return Cypher.node(t.getName());
-    }
-
-    private Node lookupNode(Table<?> t) {
-        Node node = tables.get(t);
-
+    private Node lookupNode(Table<?> t, Context ctx) {
+        Node node = ctx.getNode(t);
         if (node != null)
             return node;
         else
             return node(t);
     }
 
-    static final <T> T println(T t) {
-        System.out.println(t);
-        return t;
+    private Condition condition(org.jooq.Condition c, Context ctx) {
+        if (c instanceof QOM.And a)
+            return condition(a.$arg1(), ctx).and(condition(a.$arg2(), ctx));
+        else if (c instanceof QOM.Or o)
+            return condition(o.$arg1(), ctx).or(condition(o.$arg2(), ctx));
+        else if (c instanceof QOM.Eq<?> e)
+            return expression(e.$arg1(), ctx).eq(expression(e.$arg2(), ctx));
+        else
+            throw new IllegalArgumentException("unsupported: " + c);
+    }
+
+    private Node node(Table<?> t) {
+        if (t instanceof TableAlias<?> ta)
+            return node(ta.$aliased()).named(ta.$alias().last());
+        else
+            return Cypher.node(t.getName());
     }
 }
