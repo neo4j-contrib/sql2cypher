@@ -31,7 +31,6 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.QOM;
 import org.jooq.impl.QOM.TableAlias;
 
-import org.jooq.impl.SQLDataType;
 import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
@@ -40,6 +39,7 @@ import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.cypherdsl.core.ResultStatement;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithWhere;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
+import org.neo4j.cypherdsl.core.renderer.Configuration;
 import org.neo4j.cypherdsl.core.renderer.Renderer;
 
 import static org.jooq.impl.DSL.createTable;
@@ -47,24 +47,28 @@ import static org.jooq.impl.DSL.createTable;
 /**
  * Quick proof of concept of a jOOQ/Cypher-DSL based SQL to Cypher translator
  * @author Lukas Eder
+ * @author Michael J. Simons
  */
 public class SQLToCypher {
 
     public static void main(String[] args) {
-        println(DSL.using(SQLDialect.DEFAULT).meta(createTable("t").column("a", SQLDataType.INTEGER)));
-        Parser parser = DSL.using(SQLDialect.DEFAULT).parser();
-
-        Select<?> x = parser.parseSelect("""
+        System.out.println(new SQLToCypher().convert("""
             SELECT t.a, t.b
             FROM my_table AS t
             WHERE t.a = 1
-            """);
-
-        println(x);
-        println(Renderer.getDefaultRenderer().render(new SQLToCypher().statement(x)));
+            """));
     }
 
-    Map<Table<?>, Node> tables = new HashMap<>();
+    // Meta data can be added via .meta(createTable("t").column("a", SQLDataType.INTEGER))
+    private final Parser parser = DSL.using(SQLDialect.DEFAULT).parser();
+    private final Renderer renderer = Renderer.getRenderer(Configuration.prettyPrinting());
+    private final Map<Table<?>, Node> tables = new HashMap<>();
+
+    // Unsure how thread safe this should be (wrt the node lookup table), but this here will do for the purpose of adding some tests
+    public String convert(String sql) {
+        Select<?> query = parser.parseSelect(sql);
+        return renderer.render(statement(query));
+    }
 
     private ResultStatement statement(Select<?> x) {
         OngoingReadingWithoutWhere m1 = Cypher

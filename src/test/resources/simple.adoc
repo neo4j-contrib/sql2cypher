@@ -1,0 +1,26 @@
+:toc:
+
+= Tests for simple select queries
+
+These tests cover single table selects and basic conditions.
+
+== PoC
+
+The input
+
+[source,sql,id=t1_0,name=select_with_condition]
+----
+SELECT t.a, t.b
+FROM my_table AS t
+WHERE t.a = 1
+----
+
+will be transpiled to
+
+[source,cypher,id=t1_0_expected]
+----
+MATCH (T:MY_TABLE)
+WHERE T.A = 1
+RETURN T.A, T.B
+----
+
