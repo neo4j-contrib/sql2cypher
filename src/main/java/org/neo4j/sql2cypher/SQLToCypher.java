@@ -23,38 +23,27 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.jooq.*;
 import org.jooq.Asterisk;
-import org.jooq.Field;
-import org.jooq.Meta;
-import org.jooq.MetaProvider;
-import org.jooq.Param;
-import org.jooq.Parser;
-import org.jooq.QualifiedAsterisk;
-import org.jooq.Query;
-import org.jooq.SQLDialect;
-import org.jooq.Select;
-import org.jooq.SelectField;
-import org.jooq.SelectFieldOrAsterisk;
-import org.jooq.SortField;
-import org.jooq.Table;
-import org.jooq.TableField;
 import org.jooq.conf.ParseNameCase;
 import org.jooq.conf.ParseWithMetaLookups;
 import org.jooq.conf.RenderNameCase;
+import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.jooq.impl.QOM;
 import org.jooq.impl.QOM.TableAlias;
 
 import org.neo4j.cypherdsl.core.*;
+import org.neo4j.cypherdsl.core.Condition;
+import org.neo4j.cypherdsl.core.Functions;
+import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithWhere;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
 import org.neo4j.cypherdsl.core.renderer.Configuration;
 import org.neo4j.cypherdsl.core.renderer.Renderer;
 
 import static org.jooq.impl.DSL.createTable;
-import static org.jooq.impl.DSL.exp;
-import static org.jooq.impl.DSL.val;
 import static org.neo4j.cypherdsl.core.Functions.*;
 
 /**
@@ -72,47 +61,86 @@ public class SQLToCypher {
             """));
     }
 
+    private final Config config;
+
     public static SQLToCypher withoutMappings(){
-        return new SQLToCypher(Map.of());
+        return new SQLToCypher(new Config());
     }
 
     public static SQLToCypher with(Map<String, String> tableMappings) {
-        return new SQLToCypher(tableMappings);
+        return new SQLToCypher(new Config().with(tableMappings));
+    }
+    public static SQLToCypher with(Config config) {
+        return new SQLToCypher(config);
     }
 
-    private static final Renderer CYPHER_RENDERER = Renderer.getRenderer(Configuration.prettyPrinting());
-    private final Parser parser;
+    public static class Config {
+        private final Settings jooqSettings;
+        private final Map<String,String> tableToLabelMappings;
+        private final SQLDialect sqlDialect;
+        private final Configuration cypherDslConfig;
+
+        public Config() {
+            this(Map.of(), defaultSettings(), SQLDialect.DEFAULT, Configuration.prettyPrinting());
+        }
+
+        public Config(Map<String, String> tableToLabelMappings, Settings jooqSettings, SQLDialect sqlDialect, Configuration cypherDslConfig) {
+            this.jooqSettings = jooqSettings;
+            this.tableToLabelMappings = tableToLabelMappings;
+            this.sqlDialect = sqlDialect;
+            this.cypherDslConfig = cypherDslConfig;
+        }
+
+        public Config with(Map<String, String> tableMappings) {
+            return new Config(tableMappings, this.jooqSettings, this.sqlDialect, this.cypherDslConfig);
+        }
+
+        private static Settings defaultSettings() {
+            return new DefaultConfiguration().settings()
+                    .withParseNameCase(ParseNameCase.LOWER_IF_UNQUOTED) // Should be configurable
+                    .withRenderNameCase(RenderNameCase.LOWER)
+                    .withParseWithMetaLookups(ParseWithMetaLookups.IGNORE_ON_FAILURE)
+                    .withDiagnosticsLogging(true);
+        }
+    }
     private final Map<Table<?>, Node> tables = new HashMap<>();
 
-    private SQLToCypher(Map<String, String> tableToLabelMappings) {
+    private SQLToCypher(Config config) {
+        this.config = config;
+    }
 
-        var jooqConfig = new DefaultConfiguration().settings()
-            .withParseNameCase(ParseNameCase.LOWER_IF_UNQUOTED) // Should be configurable
-            .withRenderNameCase(RenderNameCase.LOWER)
-            .withParseWithMetaLookups(ParseWithMetaLookups.IGNORE_ON_FAILURE)
-            .withDiagnosticsLogging(true);
-        var dsl = DSL.using(SQLDialect.DEFAULT, jooqConfig);
-        dsl.configuration().set(new MetaProvider() {
-            @Override
-            public Meta provide() {
-                var queries = tableToLabelMappings.entrySet()
-                    .stream()
-                    .map(e -> (Query) createTable(e.getKey()).comment("label=" + e.getValue()))
-                    .toList();
-                return dsl.meta(queries.toArray(Query[]::new));
-            }
+    private DSLContext configure(Config config) {
+        var jooqConfig = config.jooqSettings;
+        var dsl = DSL.using(config.sqlDialect, jooqConfig);
+        dsl.configuration().set(() -> {
+            var queries = config.tableToLabelMappings.entrySet()
+                .stream()
+                .map(e -> (Query) createTable(e.getKey()).comment("label=" + e.getValue()))
+                .toList();
+            return dsl.meta(queries.toArray(Query[]::new));
         });
-
-        parser = dsl.parser();
+        return dsl;
     }
 
     // Unsure how thread safe this should be (wrt the node lookup table), but this here will do for the purpose of adding some tests
     public String convert(String sql) {
-        Select<?> query = parser.parseSelect(sql);
-        return CYPHER_RENDERER.render(statement(query));
+        Select<?> query = parse(sql);
+        ResultStatement statement = statement(query);
+        return render(statement);
     }
 
-    private ResultStatement statement(Select<?> x) {
+    String render(ResultStatement statement) {
+        Renderer renderer = Renderer.getRenderer(config.cypherDslConfig);
+        return renderer.render(statement);
+    }
+
+    private Select<?> parse(String sql) {
+        DSLContext dsl = configure(config);
+        Parser parser = dsl.parser();
+        return parser.parseSelect(sql);
+    }
+
+    ResultStatement statement(Select<?> x) {
 
         // Done lazy as otherwise the property containers won't be resolved
         Supplier<List<Expression>> resultColumnsSupplier = () -> x.$select().stream().map(t -> (Expression) expression(t)).toList();
@@ -159,7 +187,7 @@ public class SQLToCypher {
     }
 
     private Expression expression(SelectField<?> s) {
-        if (s instanceof QOM.FieldAlias<?> fa && fa.$alias() != null)
+        if (s instanceof QOM.FieldAlias<?> fa)
             return expression(fa.$aliased()).as(fa.$alias().last());
         else if (s instanceof Field<?> f)
             return expression(f);
@@ -209,11 +237,11 @@ public class SQLToCypher {
         else if (f instanceof QOM.Sign e)
             return sign(expression(e.$arg1()));
         else if (f instanceof QOM.Rand e)
-            return rand();
+            return Functions.rand();
 
         // https://neo4j.com/docs/cypher-manual/current/functions/mathematical-logarithmic/
         else if (f instanceof QOM.Euler e)
-            return e();
+            return Functions.e();
         else if (f instanceof QOM.Exp e)
             return Functions.exp(expression(e.$arg1()));
         else if (f instanceof QOM.Ln e)
@@ -241,8 +269,8 @@ public class SQLToCypher {
             return cot(expression(e.$arg1()));
         else if (f instanceof QOM.Degrees e)
             return degrees(expression(e.$arg1()));
-        else if (f instanceof QOM.Pi e)
-            return pi();
+        else if (f instanceof QOM.Pi)
+            return Functions.pi();
         else if (f instanceof QOM.Radians e)
             return radians(expression(e.$arg1()));
         else if (f instanceof QOM.Sin e)
@@ -304,7 +332,7 @@ public class SQLToCypher {
     }
 
     private Node node(Table<?> t) {
-        if (t instanceof TableAlias<?> ta && ta.$alias() != null)
+        if (t instanceof TableAlias<?> ta)
             return node(ta.$aliased()).named(ta.$alias().last());
         else {
             return Cypher.node(nodeName(t));
@@ -330,10 +358,5 @@ public class SQLToCypher {
             return node;
         else
             return node(t);
-    }
-
-    static final <T> T println(T t) {
-        System.out.println(t);
-        return t;
     }
 }
