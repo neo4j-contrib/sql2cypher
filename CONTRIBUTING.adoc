@@ -1,0 +1,32 @@
+= Contributing
+
+== Building and compiling sql2cypher
+
+JDK 17 and Maven is required. Please run to test and package the project:
+
+[source,bash]
+----
+./mvnw clean verify
+----
+
+== Tasks
+
+=== Formatting sources / adding headers
+
+When you add new files, you can run
+
+[source,bash]
+----
+./mvnw license:format
+----
+
+to add required headers automatically.
+
+=== Sorting the build file
+
+To keep the dependencies in a predictable order, we enforce sorting of the build file. You can trigger this manually via
+
+[source,bash]
+----
+./mvnw  sortpom:verify@sort
+----
