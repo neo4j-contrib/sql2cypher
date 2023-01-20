@@ -26,6 +26,10 @@
 	<description>Experimental SQL to Cypher Transpiler using jooq and cypher-dsl</description>
 
 	<inceptionYear>2023</inceptionYear>
+	<organization>
+		<name>Neo4j, Neo4j Sweden AB</name>
+		<url>https://neo4j.com</url>
+	</organization>
 	<licenses>
 		<license>
 			<name>The Apache Software License, Version 2.0</name>
@@ -34,12 +38,50 @@
 		</license>
 	</licenses>
 
+	<developers>
+		<developer>
+			<id>leder</id>
+			<name>Lukas Eder</name>
+			<email>lukas.eder at gmail.com</email>
+			<organization>jOOQ</organization>
+			<organizationUrl>https://jooq.org</organizationUrl>
+			<roles>
+				<role>Developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+		<developer>
+			<id>mhunger</id>
+			<name>Michael Hunger</name>
+			<email>michael.hunger at neo4j.com</email>
+			<organization>Neo Technology</organization>
+			<organizationUrl>https://neo4j.com</organizationUrl>
+			<roles>
+				<role>Developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+		<developer>
+			<id>msimons</id>
+			<name>Michael Simons</name>
+			<email>michael.simons at neo4j.com</email>
+			<organization>Neo Technology</organization>
+			<organizationUrl>https://neo4j.com</organizationUrl>
+			<roles>
+				<role>Developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+	</developers>
+
 	<properties>
 		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
+		<artifactsDir>${project.build.directory}</artifactsDir>
 		<asciidoctorj.version>2.5.7</asciidoctorj.version>
 		<assertj.version>3.24.1</assertj.version>
-		<imageName>sql2cypher</imageName>
+		<imageName>${project.artifactId}</imageName>
 		<java.version>17</java.version>
+		<jreleaser-maven-plugin.version>1.4.0</jreleaser-maven-plugin.version>
 		<junit-jupiter.version>5.9.2</junit-jupiter.version>
 		<license-maven-plugin.version>4.2.rc2</license-maven-plugin.version>
 		<mainClass>org.neo4j.sql2cypher.SQLToCypher</mainClass>
@@ -241,6 +283,46 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.jreleaser</groupId>
+				<artifactId>jreleaser-maven-plugin</artifactId>
+				<version>${jreleaser-maven-plugin.version}</version>
+				<configuration>
+					<jreleaser>
+						<project>
+							<name>${project.artifactId}</name>
+						</project>
+						<release>
+							<github>
+								<skipTag>true</skipTag>
+								<tagName>{{projectVersion}}</tagName>
+								<releaseName>{{projectVersion}}</releaseName>
+								<branch>main</branch>
+								<changelog>
+									<formatted>ALWAYS</formatted>
+									<contentTemplate>etc/jreleaser/changelog.md.tpl</contentTemplate>
+									<format>- {{commitShortHash}} {{commitTitle}}</format>
+									<preset>conventional-commits</preset>
+								</changelog>
+							</github>
+						</release>
+						<distributions>
+							<sql2cypher-no-arch>
+								<type>JAVA_BINARY</type>
+								<artifacts>
+									<artifact>
+										<path>{{artifactsDir}}/{{projectName}}-{{projectVersion}}.zip</path>
+									</artifact>
+								</artifacts>
+								<java>
+									<version>${java.version}</version>
+									<mainClass>${mainClass}</mainClass>
+								</java>
+							</sql2cypher-no-arch>
+						</distributions>
+					</jreleaser>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
