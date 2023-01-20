@@ -15,21 +15,34 @@
  */
 package org.neo4j.sql2cypher;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+import org.jooq.Asterisk;
 import org.jooq.Field;
+import org.jooq.Meta;
+import org.jooq.MetaProvider;
 import org.jooq.Param;
 import org.jooq.Parser;
+import org.jooq.QualifiedAsterisk;
+import org.jooq.Query;
 import org.jooq.SQLDialect;
 import org.jooq.Select;
 import org.jooq.SelectField;
 import org.jooq.SelectFieldOrAsterisk;
+import org.jooq.SortField;
 import org.jooq.Table;
 import org.jooq.TableField;
+import org.jooq.conf.ParseNameCase;
+import org.jooq.conf.ParseWithMetaLookups;
+import org.jooq.conf.RenderNameCase;
 import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultConfiguration;
 import org.jooq.impl.QOM;
 import org.jooq.impl.QOM.TableAlias;
 
@@ -39,12 +52,16 @@ import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.cypherdsl.core.ResultStatement;
+import org.neo4j.cypherdsl.core.SortItem;
+import org.neo4j.cypherdsl.core.StatementBuilder;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithWhere;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
 import org.neo4j.cypherdsl.core.renderer.Configuration;
 import org.neo4j.cypherdsl.core.renderer.Renderer;
 
 import static org.jooq.impl.DSL.createTable;
+import static org.jooq.impl.DSL.exp;
+import static org.jooq.impl.DSL.val;
 
 /**
  * Quick proof of concept of a jOOQ/Cypher-DSL based SQL to Cypher translator
@@ -54,22 +71,51 @@ import static org.jooq.impl.DSL.createTable;
 public class SQLToCypher {
 
     public static void main(String[] args) {
-        System.out.println(new SQLToCypher().convert("""
+        System.out.println(SQLToCypher.withoutMappings().convert("""
             SELECT t.a, t.b
             FROM my_table AS t
             WHERE t.a = 1
             """));
     }
 
-    // Meta data can be added via .meta(createTable("t").column("a", SQLDataType.INTEGER))
-    private final Parser parser = DSL.using(SQLDialect.DEFAULT).parser();
-    private final Renderer renderer = Renderer.getRenderer(Configuration.prettyPrinting());
+    public static SQLToCypher withoutMappings(){
+        return new SQLToCypher(Map.of());
+    }
+
+    public static SQLToCypher with(Map<String, String> tableMappings) {
+        return new SQLToCypher(tableMappings);
+    }
+
+    private static final Renderer CYPHER_RENDERER = Renderer.getRenderer(Configuration.prettyPrinting());
+    private final Parser parser;
     private final Map<Table<?>, Node> tables = new HashMap<>();
+
+    private SQLToCypher(Map<String, String> tableToLabelMappings) {
+
+        var jooqConfig = new DefaultConfiguration().settings()
+            .withParseNameCase(ParseNameCase.LOWER_IF_UNQUOTED) // Should be configurable
+            .withRenderNameCase(RenderNameCase.LOWER)
+            .withParseWithMetaLookups(ParseWithMetaLookups.IGNORE_ON_FAILURE)
+            .withDiagnosticsLogging(true);
+        var dsl = DSL.using(SQLDialect.DEFAULT, jooqConfig);
+        dsl.configuration().set(new MetaProvider() {
+            @Override
+            public Meta provide() {
+                var queries = tableToLabelMappings.entrySet()
+                    .stream()
+                    .map(e -> (Query) createTable(e.getKey()).comment("label=" + e.getValue()))
+                    .toList();
+                return dsl.meta(queries.toArray(Query[]::new));
+            }
+        });
+
+        parser = dsl.parser();
+    }
 
     // Unsure how thread safe this should be (wrt the node lookup table), but this here will do for the purpose of adding some tests
     public String convert(String sql) {
         Select<?> query = parser.parseSelect(sql);
-        return renderer.render(statement(query));
+        return CYPHER_RENDERER.render(statement(query));
     }
 
     private ResultStatement statement(Select<?> x) {
@@ -92,14 +138,30 @@ public class SQLToCypher {
              ? m1.where(condition(x.$where()))
              : (OngoingReadingWithWhere) m1;
 
-        return m2.returning(resultColumnsSupplier.get()).build();
+        var returning = m2.returning(resultColumnsSupplier.get())
+            .orderBy(x.$orderBy().stream().map(this::expression).toList());
+
+
+        StatementBuilder.BuildableStatement<ResultStatement> buildableStatement;
+        if (!(x.$limit() instanceof Param<?> param)) {
+            buildableStatement = returning;
+        } else {
+            buildableStatement = returning.limit(expression(param));
+        }
+
+        return buildableStatement.build();
     }
 
     private Expression expression(SelectFieldOrAsterisk t) {
-        if (t instanceof SelectField<?> s)
+        if (t instanceof SelectField<?> s) {
             return expression(s);
-        else
+        } else if(t instanceof Asterisk) {
+            return Cypher.asterisk();
+        } else if(t instanceof QualifiedAsterisk q){
+            return node(q.$table()).getSymbolicName().orElseGet(() -> Cypher.name(q.$table().getName()));
+        } else {
             throw new IllegalArgumentException("unsupported: " + t);
+        }
     }
 
     private Expression expression(SelectField<?> s) {
@@ -109,6 +171,10 @@ public class SQLToCypher {
             return expression(f);
         else
             throw new IllegalArgumentException("unsupported: " + s);
+    }
+
+    private SortItem expression(SortField<?> s) {
+        return Cypher.sort(expression(s.$field()), SortItem.Direction.valueOf(s.$sortOrder().name().toUpperCase(Locale.ROOT)));
     }
 
     private Expression expression(Field<?> f) {
@@ -139,8 +205,21 @@ public class SQLToCypher {
     private Node node(Table<?> t) {
         if (t instanceof TableAlias<?> ta && ta.$alias() != null)
             return node(ta.$aliased()).named(ta.$alias().last());
-        else
-            return Cypher.node(t.getName());
+        else {
+            return Cypher.node(nodeName(t));
+        }
+    }
+
+    private String nodeName(Table<?> t) {
+
+        var comment = t.getComment();
+        if (!comment.isBlank()) {
+            var config = Arrays.stream(comment.split(",")).map(s -> s.split("="))
+                .collect(Collectors.toMap(a -> a[0], a -> a[1]));
+            return config.getOrDefault("label", t.getName());
+        }
+
+        return t.getName();
     }
 
     private Node lookupNode(Table<?> t) {

@@ -17,10 +17,10 @@ package org.neo4j.sql2cypher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,15 +35,9 @@ import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.ContentNode;
 import org.asciidoctor.ast.Document;
 import org.asciidoctor.extension.Treeprocessor;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.DynamicNode;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import net.bytebuddy.asm.Advice;
 
 /**
  * @author Michael J. Simons
@@ -63,14 +57,14 @@ class SQLToCypherTest {
 
 	static Stream<Arguments> simple() throws Exception {
 		return getTestData("/simple.adoc").stream()
-			.map(t -> Arguments.of(t.name(), t.sql(), t.cypher()));
+			.map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings()));
 
 	}
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource
-	void simple(String name, String sql, String expected) {
-		assertThat(new SQLToCypher().convert(sql)).isEqualTo(expected);
+	void simple(String name, String sql, String expected, Map<String, String> tableMappings) {
+		assertThat(SQLToCypher.with(tableMappings).convert(sql)).isEqualTo(expected);
 	}
 
 	private static class TestDataExtractor extends Treeprocessor {
@@ -97,13 +91,20 @@ class SQLToCypherTest {
 					var name = (String) sqlBlock.getAttribute("name");
 					var sql = String.join(System.lineSeparator(), sqlBlock.getLines());
 					var cypher = String.join(System.lineSeparator(), blocks.get(sqlBlock.getId() + "_expected").getLines());
-					return new TestData(name, sql, cypher);
+					Map<String, String> tableMappings = new HashMap<>();
+					if (sqlBlock.getAttribute("table_mappings") != null) {
+						tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(","))
+							.map(String::trim)
+							.map(s -> s.split(":"))
+							.collect(Collectors.toMap(a -> a[0], a -> a[1]));
+					}
+					return new TestData(name, sql, cypher, tableMappings);
 				})
 				.forEach(testData::add);
 			return document;
 		}
 	}
 
-	private record TestData(String name, String sql, String cypher) {
+	private record TestData(String name, String sql, String cypher, Map<String, String> tableMappings) {
 	}
 }
