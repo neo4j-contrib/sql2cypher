@@ -24,3 +24,12 @@ WHERE T.A = 1
 RETURN T.A, T.B
 ----
 
+[source,sql,id=t1_1,name=no_driving_table]
+----
+SELECT 1
+----
+
+[source,cypher,id=t1_1_expected]
+----
+RETURN 1
+----

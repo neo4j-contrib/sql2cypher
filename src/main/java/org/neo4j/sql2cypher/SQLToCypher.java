@@ -16,7 +16,9 @@
 package org.neo4j.sql2cypher;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.jooq.Field;
 import org.jooq.Param;
@@ -71,6 +73,14 @@ public class SQLToCypher {
     }
 
     private ResultStatement statement(Select<?> x) {
+
+        // Done lazy as otherwise the property containers won't be resolved
+        Supplier<List<Expression>> resultColumnsSupplier = () -> x.$select().stream().map(t -> (Expression) expression(t)).toList();
+
+        if (x.$from().isEmpty()) {
+            return Cypher.returning(resultColumnsSupplier.get()).build();
+        }
+
         OngoingReadingWithoutWhere m1 = Cypher
             .match(x.$from().stream().map(t -> {
                 Node node = node(t);
@@ -82,7 +92,7 @@ public class SQLToCypher {
              ? m1.where(condition(x.$where()))
              : (OngoingReadingWithWhere) m1;
 
-        return m2.returning(x.$select().stream().map(t -> (Expression) expression(t)).toList()).build();
+        return m2.returning(resultColumnsSupplier.get()).build();
     }
 
     private Expression expression(SelectFieldOrAsterisk t) {
