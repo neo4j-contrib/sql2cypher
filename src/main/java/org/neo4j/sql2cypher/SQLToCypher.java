@@ -250,6 +250,44 @@ public class SQLToCypher {
         else if (f instanceof QOM.Tan e)
             return tan(expression(e.$arg1()));
 
+        // https://neo4j.com/docs/cypher-manual/current/functions/string/
+        else if (f instanceof QOM.Cast<?> e)
+            if (e.$dataType().isString())
+                return Functions.toString(expression(e.$field()));
+            else
+                throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Left e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Lower e)
+            return toLower(expression(e.$arg1()));
+        else if (f instanceof QOM.Ltrim e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Replace e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Reverse e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Right e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Rtrim e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Substring e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+        else if (f instanceof QOM.Trim e)
+            if (e.$arg2() != null)
+                throw new IllegalArgumentException("unsupported: " + f);
+            else
+                return Functions.trim(expression(e.$arg1()));
+        else if (f instanceof QOM.Upper e)
+            // TODO: Support this in Cypher-DSL
+            throw new IllegalArgumentException("unsupported: " + f);
+
         else
             throw new IllegalArgumentException("unsupported: " + f);
     }

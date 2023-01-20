@@ -74,3 +74,27 @@ will be transpiled to
 ----
 RETURN acos(1), asin(1), atan(1), atan2(1, 2), cos(1), cot(1), degrees(1), pi(), radians(1), sin(1), tan(1)
 ----
+
+
+
+== String functions
+
+See https://neo4j.com/docs/cypher-manual/current/functions/string/
+
+The input
+
+[source,sql,id=t5_0,name=select_with_string_functions]
+----
+SELECT lower('abc'), cast(3 as varchar), trim(' abc ')
+----
+
+will be transpiled to
+
+[source,cypher,id=t5_0_expected]
+----
+RETURN toLower('abc'), toString(3), trim(' abc ')
+----
+
+Cypher-DSL doesn't yet support all of these:
+- From: `SELECT left('abc', 2), ltrim(' abc '), replace('abc', 'b'), replace('abc', 'b', 'x'), reverse('abc'), right('abc', 2), rtrim(' abc '), substring('abc', 2), substring('abc', 2, 2), lower('abc'), cast(3 as varchar), upper('abc'), trim(' abc ')`
+- To: `RETURN left('abc', 2), ltrim(' abc '), replace('abc', 'b', ''), replace('abc', 'b', 'x'), reverse('abc'), right('abc', 2), rtrim(' abc '), substring('abc', (2 - 1)), substring('abc', (2 - 1), 2), toLower('abc'), toString(3), toUpper('abc'), trim(' abc ')`
