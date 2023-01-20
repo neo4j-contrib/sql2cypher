@@ -1,0 +1,13 @@
+This is [sql2cypher][1].
+
+Use
+
+    ./bin/sql2cypher -h
+
+on a Unix like machine for usage instructions and
+
+    ./bin/sql2cypher.bat -h
+
+on Windows.
+
+[1]: https://github.com/neo4j-contrib/sql2cypher

@@ -33,12 +33,18 @@
 	</licenses>
 
 	<properties>
+		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
+		<imageName>sql2cypher</imageName>
 		<java.version>17</java.version>
 		<license-maven-plugin.version>4.2.rc2</license-maven-plugin.version>
+		<mainClass>org.neo4j.sql2cypher.SQLToCypher</mainClass>
+		<maven-assembly-plugin.version>3.4.2</maven-assembly-plugin.version>
 		<maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+		<maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
 		<maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
 		<maven.compiler.release>${java.version}</maven.compiler.release>
+		<native.maven.plugin.version>0.9.18</native.maven.plugin.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sortpom-maven-plugin.version>3.2.0</sortpom-maven-plugin.version>
@@ -121,6 +127,7 @@
 						<exclude>**/*.txt</exclude>
 						<exclude>**/*.yaml</exclude>
 						<exclude>**/*.extension</exclude>
+						<exclude>**/README</exclude>
 						<exclude>**/org.mockito.plugins.MockMaker</exclude>
 						<exclude>**/package-info.java</exclude>
 					</excludes>
@@ -132,6 +139,69 @@
 							<goal>check</goal>
 						</goals>
 						<phase>validate</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>${maven-jar-plugin.version}</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>${mainClass}</mainClass>
+						</manifest>
+					</archive>
+					<skipIfEmpty>true</skipIfEmpty>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>appassembler-maven-plugin</artifactId>
+				<version>${appassembler-maven-plugin.version}</version>
+				<configuration>
+					<assembleDirectory>${project.build.directory}/assembly</assembleDirectory>
+					<repositoryLayout>flat</repositoryLayout>
+					<repositoryName>lib</repositoryName>
+					<programs>
+						<program>
+							<mainClass>${mainClass}</mainClass>
+							<id>sql2cypher</id>
+						</program>
+					</programs>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-distribution</id>
+						<goals>
+							<goal>assemble</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>${maven-assembly-plugin.version}</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+					<appendAssemblyId>false</appendAssemblyId>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assembly-java</id>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<finalName>sql2cypher-${project.version}</finalName>
+							<attach>false</attach>
+							<descriptors>
+								<descriptor>src/main/assembly/assembly-java.xml</descriptor>
+							</descriptors>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
@@ -160,6 +230,42 @@
 				<skipNativeBuild>true</skipNativeBuild>
 				<skipTests>true</skipTests>
 			</properties>
+		</profile>
+		<profile>
+			<id>native</id>
+			<activation>
+				<property>
+					<name>native</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.graalvm.buildtools</groupId>
+						<artifactId>native-maven-plugin</artifactId>
+						<version>${native.maven.plugin.version}</version>
+						<extensions>true</extensions>
+						<configuration>
+							<requiredVersion>22.3</requiredVersion>
+							<mainClass>${mainClass}</mainClass>
+							<imageName>${imageName}</imageName>
+							<buildArgs>
+								<arg>--no-fallback</arg>
+								<arg>-H:+PrintClassInitialization</arg>
+							</buildArgs>
+						</configuration>
+						<executions>
+							<execution>
+								<id>create-native-image</id>
+								<goals>
+									<goal>compile-no-fork</goal>
+								</goals>
+								<phase>package</phase>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
 		</profile>
 	</profiles>
 </project>
