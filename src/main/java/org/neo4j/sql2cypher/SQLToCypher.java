@@ -345,6 +345,10 @@ public class SQLToCypher {
             return condition(a.$arg1()).and(condition(a.$arg2()));
         else if (c instanceof QOM.Or o)
             return condition(o.$arg1()).or(condition(o.$arg2()));
+        else if (c instanceof QOM.Xor o)
+            return condition(o.$arg1()).xor(condition(o.$arg2()));
+        else if (c instanceof QOM.Not o)
+            return condition(o.$arg1()).not();
         else if (c instanceof QOM.Eq<?> e)
             return expression(e.$arg1()).eq(expression(e.$arg2()));
         else if (c instanceof QOM.Gt<?> e)
