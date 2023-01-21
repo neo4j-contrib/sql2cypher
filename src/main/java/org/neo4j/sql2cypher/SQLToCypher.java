@@ -150,7 +150,7 @@ public class SQLToCypher {
     }
 
     String render(ResultStatement statement) {
-        Renderer renderer = Renderer.getRenderer(config.cypherDslConfig);
+        Renderer renderer = Renderer.getRenderer(config.getCypherDslConfig());
         return renderer.render(statement);
     }
 
@@ -240,7 +240,7 @@ public class SQLToCypher {
         else if (f instanceof QOM.Div<?> e)
             return expression(e.$arg1()).divide(expression(e.$arg2()));
         else if (f instanceof QOM.Neg<?> e)
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
 
         // https://neo4j.com/docs/cypher-manual/current/functions/mathematical-numeric/
         else if (f instanceof QOM.Abs<?> e)
@@ -256,11 +256,11 @@ public class SQLToCypher {
                 return round(expression(e.$arg1()), expression(e.$arg2()));
         else if (f instanceof QOM.Sign e)
             return sign(expression(e.$arg1()));
-        else if (f instanceof QOM.Rand e)
+        else if (f instanceof QOM.Rand)
             return Functions.rand();
 
         // https://neo4j.com/docs/cypher-manual/current/functions/mathematical-logarithmic/
-        else if (f instanceof QOM.Euler e)
+        else if (f instanceof QOM.Euler)
             return Functions.e();
         else if (f instanceof QOM.Exp e)
             return Functions.exp(expression(e.$arg1()));
@@ -306,35 +306,35 @@ public class SQLToCypher {
                 throw new IllegalArgumentException("unsupported: " + f);
         else if (f instanceof QOM.Left e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Lower e)
             return toLower(expression(e.$arg1()));
         else if (f instanceof QOM.Ltrim e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Replace e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Reverse e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Right e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Rtrim e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Substring e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
         else if (f instanceof QOM.Trim e)
             if (e.$arg2() != null)
-                throw new IllegalArgumentException("unsupported: " + f);
+                throw new IllegalArgumentException("unsupported: " + e);
             else
                 return Functions.trim(expression(e.$arg1()));
         else if (f instanceof QOM.Upper e)
             // TODO: Support this in Cypher-DSL
-            throw new IllegalArgumentException("unsupported: " + f);
+            throw new IllegalArgumentException("unsupported: " + e);
 
         else
             throw new IllegalArgumentException("unsupported: " + f);
