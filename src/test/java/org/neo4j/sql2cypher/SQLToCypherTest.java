@@ -17,7 +17,10 @@ package org.neo4j.sql2cypher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,72 +47,78 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class SQLToCypherTest {
 
-	static List<TestData> getTestData(String resourceName) throws Exception {
-		try (var asciidoctor = Asciidoctor.Factory.create()) {
-			var collector = new TestDataExtractor();
-			asciidoctor.javaExtensionRegistry().treeprocessor(collector);
+    static List<TestData> getTestData(Path path) {
+        try (var asciidoctor = Asciidoctor.Factory.create()) {
+            var collector = new TestDataExtractor();
+            asciidoctor.javaExtensionRegistry().treeprocessor(collector);
 
-			var content = Files.readString(Paths.get(Objects.requireNonNull(SQLToCypherTest.class.getResource(resourceName)).toURI()));
-			asciidoctor.load(content, Options.builder().build());
-			return collector.testData;
-		}
-	}
+            var content = Files.readString(path);
+            asciidoctor.load(content, Options.builder().build());
+            return collector.testData;
+        } catch (IOException ioe) {
+            throw new RuntimeException("Error reading TCK file " + path, ioe);
+        }
+    }
 
-	static Stream<Arguments> simple() throws Exception {
+    static Stream<Arguments> simple() throws Exception {
 
-		// TODO: Automate file lookup?
-		return Stream.concat(
-			getTestData("/expressions.adoc").stream()
-				.map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings())),
-			getTestData("/simple.adoc").stream()
-				.map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings()))
-		);
-	}
+        var path = ClassLoader.getSystemResource("simple.adoc").getPath();
+        var parentFolder = new File(path).getParentFile();
+        if (!parentFolder.isDirectory()) return Stream.empty();
 
-	@ParameterizedTest(name = "{0}")
-	@MethodSource
-	void simple(String name, String sql, String expected, Map<String, String> tableMappings) {
-		assertThat(SQLToCypher.with(tableMappings).convert(sql)).isEqualTo(expected);
-	}
+        var files = parentFolder.listFiles((f) -> f.getName().toLowerCase().endsWith(".adoc"));
+        if (files == null) return Stream.empty();
+        return Arrays.stream(files)
+                .peek(System.out::println)
+                .flatMap(file ->
+                        getTestData(file.toPath()).stream()
+                                .map(t -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings())));
+    }
 
-	private static class TestDataExtractor extends Treeprocessor {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource
+    void simple(String name, String sql, String expected, Map<String, String> tableMappings) {
+        assertThat(SQLToCypher.with(tableMappings).convert(sql)).isEqualTo(expected);
+    }
 
-		private final List<TestData> testData = new ArrayList<>();
+    private static class TestDataExtractor extends Treeprocessor {
 
-		TestDataExtractor() {
-			super(new HashMap<>()); // Must be mutable
-		}
+        private final List<TestData> testData = new ArrayList<>();
 
-		@Override
-		public Document process(Document document) {
+        TestDataExtractor() {
+            super(new HashMap<>()); // Must be mutable
+        }
 
-			var blocks = document
-				.findBy(Map.of("context", ":listing", "style", "source"))
-				.stream()
-				.map(Block.class::cast)
-				.filter(b -> b.hasAttribute("id"))
-				.collect(Collectors.toMap(ContentNode::getId, Function.identity()));
+        @Override
+        public Document process(Document document) {
 
-			blocks.values().stream()
-				.filter(b -> "sql".equals(b.getAttribute("language")))
-				.map(sqlBlock -> {
-					var name = (String) sqlBlock.getAttribute("name");
-					var sql = String.join("\n", sqlBlock.getLines());
-					var cypher = String.join("\n", blocks.get(sqlBlock.getId() + "_expected").getLines());
-					Map<String, String> tableMappings = new HashMap<>();
-					if (sqlBlock.getAttribute("table_mappings") != null) {
-						tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(","))
-							.map(String::trim)
-							.map(s -> s.split(":"))
-							.collect(Collectors.toMap(a -> a[0], a -> a[1]));
-					}
-					return new TestData(name, sql, cypher, tableMappings);
-				})
-				.forEach(testData::add);
-			return document;
-		}
-	}
+            var blocks = document
+                    .findBy(Map.of("context", ":listing", "style", "source"))
+                    .stream()
+                    .map(Block.class::cast)
+                    .filter(b -> b.hasAttribute("id"))
+                    .collect(Collectors.toMap(ContentNode::getId, Function.identity()));
 
-	private record TestData(String name, String sql, String cypher, Map<String, String> tableMappings) {
-	}
+            blocks.values().stream()
+                    .filter(b -> "sql".equals(b.getAttribute("language")))
+                    .map(sqlBlock -> {
+                        var name = (String) sqlBlock.getAttribute("name");
+                        var sql = String.join("\n", sqlBlock.getLines());
+                        var cypher = String.join("\n", blocks.get(sqlBlock.getId() + "_expected").getLines());
+                        Map<String, String> tableMappings = new HashMap<>();
+                        if (sqlBlock.getAttribute("table_mappings") != null) {
+                            tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(","))
+                                    .map(String::trim)
+                                    .map(s -> s.split(":"))
+                                    .collect(Collectors.toMap(a -> a[0], a -> a[1]));
+                        }
+                        return new TestData(name, sql, cypher, tableMappings);
+                    })
+                    .forEach(testData::add);
+            return document;
+        }
+    }
+
+    private record TestData(String name, String sql, String cypher, Map<String, String> tableMappings) {
+    }
 }
