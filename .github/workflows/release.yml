@@ -26,8 +26,9 @@ jobs:
 
       - name: 'Checkout jOOQ'
         uses: actions/checkout@v3
-        repository: jOOQ/jOOQ
-        path: jOOQ
+        with:
+          repository: jOOQ/jOOQ
+          path: jOOQ
 
       - name: 'Install jOOQ Snapshot'
         working-directory: jOOQ
@@ -35,8 +36,8 @@ jobs:
 
       - name: 'Checkout relevant branch'
         uses: actions/checkout@v3
-        path: sql2cypher
         with:
+          path: sql2cypher
           ref: ${{ env.refName }}
 
       - name: 'Create jar'

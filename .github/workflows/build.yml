@@ -28,8 +28,9 @@ jobs:
 
       - name: 'Checkout jOOQ'
         uses: actions/checkout@v3
-        repository: jOOQ/jOOQ
-        path: jOOQ
+        with:
+          repository: jOOQ/jOOQ
+          path: jOOQ
 
       - name: 'Install jOOQ Snapshot'
         working-directory: jOOQ
@@ -37,7 +38,8 @@ jobs:
 
       - name: 'Checkout'
         uses: actions/checkout@v3
-        path: sql2cypher
+        with:
+          path: sql2cypher
 
       - name: 'Clean and verify'
         working-directory: sql2cypher
