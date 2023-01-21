@@ -10,7 +10,7 @@ The input
 
 [source,sql,id=t1_0,name=logic_operators]
 ----
-SELECT 1 FROM p WHERE TRUE
+SELECT 1 FROM p WHERE 1 = 1 AND 2 = 2 OR 3 = 3
 ----
 
 will be transpiled to
@@ -18,25 +18,47 @@ will be transpiled to
 [source,cypher,id=t1_0_expected]
 ----
 MATCH (:p)
-WHERE true
+WHERE ((1 = 1
+    AND 2 = 2)
+  OR 3 = 3)
 RETURN 1
 ----
 
-
-== Arithmethic Predicates
-
 The input
 
-[source,sql,id=t2_0,name=predicates_with_arithmethics]
+[source,sql,id=t1_1,name=logic_operators_rare]
 ----
-SELECT 1 FROM p WHERE 1 = 1
+SELECT 1 FROM p WHERE NOT 1 = 1 XOR 2 = 2
 ----
 
 will be transpiled to
 
+[source,cypher,id=t1_1_expected]
+----
+MATCH (:p)
+WHERE (NOT (1 = 1)
+  XOR 2 = 2)
+RETURN 1
+----
+
+
+== Arithmetic Operators
+
+The input
+
+[source,sql,id=t2_0,name=predicates_with_arithmetics]
+----
+SELECT 1 FROM p WHERE 1 = 1 AND 2 > 1 AND 1 < 2 AND 1 != 2
+----
+
+will be trtanspiled to
+
 [source,cypher,id=t2_0_expected]
 ----
 MATCH (:p)
-WHERE 1 = 1
+WHERE (1 = 1
+  AND 2 > 1
+  AND 1 < 2
+  AND 1 <> 2)
 RETURN 1
 ----
