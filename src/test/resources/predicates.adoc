@@ -1,0 +1,42 @@
+:toc:
+
+= Tests for logical predicates
+
+These tests cover logical expressions and predicates
+
+== Logical Expressions / Conditions
+
+The input
+
+[source,sql,id=t1_0,name=logic_operators]
+----
+SELECT 1 FROM p WHERE TRUE
+----
+
+will be transpiled to
+
+[source,cypher,id=t1_0_expected]
+----
+MATCH (:p)
+WHERE true
+RETURN 1
+----
+
+
+== Arithmethic Predicates
+
+The input
+
+[source,sql,id=t2_0,name=predicates_with_arithmethics]
+----
+SELECT 1 FROM p WHERE 1 = 1
+----
+
+will be transpiled to
+
+[source,cypher,id=t2_0_expected]
+----
+MATCH (:p)
+WHERE 1 = 1
+RETURN 1
+----

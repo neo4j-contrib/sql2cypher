@@ -26,6 +26,7 @@ More concrete examples can be found in the link:src/test/resources[TCK].
 
 * link:src/test/resources/simple.adoc[Simple Patterns]
 * link:src/test/resources/expressions.adoc[Expressions]
+* link:src/test/resources/predicates.adoc[Predicates]
 
 == Build & Usage
 

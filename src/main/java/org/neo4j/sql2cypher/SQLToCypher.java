@@ -347,6 +347,12 @@ public class SQLToCypher {
             return condition(o.$arg1()).or(condition(o.$arg2()));
         else if (c instanceof QOM.Eq<?> e)
             return expression(e.$arg1()).eq(expression(e.$arg2()));
+        else if (c instanceof QOM.Gt<?> e)
+            return expression(e.$arg1()).gt(expression(e.$arg2()));
+        else if (c instanceof QOM.Lt<?> e)
+            return expression(e.$arg1()).lt(expression(e.$arg2()));
+        else if (c instanceof QOM.Ne<?> e)
+            return expression(e.$arg1()).ne(expression(e.$arg2()));
         else
             throw new IllegalArgumentException("unsupported: " + c);
     }
