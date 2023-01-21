@@ -29,11 +29,27 @@ More concrete examples can be found in the link:src/test/resources[TCK].
 
 == Build & Usage
 
+.Build
 [source,shell]
 ----
 ./mvnw verify
 ./mvnw package
-./target/assembly/bin/sql2cypher
+----
+
+.Execute
+[source,shell]
+----
+./target/assembly/bin/sql2cypher 'SELECT p.name, cast(p.age as STRING)
+FROM "Person" AS p
+WHERE p.age = 18 + rand()'
+----
+
+.Output
+[source,cypher]
+----
+MATCH (p:Person)
+WHERE p.age = (18 + rand())
+RETURN p.name, toString(p.age)
 ----
 
 == Dependencies
