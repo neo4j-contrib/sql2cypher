@@ -53,12 +53,16 @@ import static org.neo4j.cypherdsl.core.Functions.*;
  */
 public class SQLToCypher {
 
-    public static void main(String[] args) {
-        System.out.println(SQLToCypher.withoutMappings().convert("""
+    public static final String TEST_STATEMENT = """
             SELECT t.a, t.b
             FROM my_table AS t
             WHERE t.a = 1
-            """));
+            """;
+
+    public static void main(String[] args) {
+        var sql = args.length == 0 ? TEST_STATEMENT : String.join(" ", args);
+        var result = SQLToCypher.withoutMappings().convert(sql);
+        System.out.println(result);
     }
 
     private final Config config;
