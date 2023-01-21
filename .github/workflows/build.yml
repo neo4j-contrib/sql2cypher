@@ -34,7 +34,7 @@ jobs:
 
       - name: 'Install jOOQ Snapshot'
         working-directory: jOOQ
-        run: mvn -DskipTests install
+        run: mvn --no-transfer-progress -DskipTests install
 
       - name: 'Checkout'
         uses: actions/checkout@v3
@@ -43,4 +43,4 @@ jobs:
 
       - name: 'Clean and verify'
         working-directory: sql2cypher
-        run: mvn clean verify
+        run: mvn --no-transfer-progress clean verify

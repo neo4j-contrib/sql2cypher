@@ -32,7 +32,7 @@ jobs:
 
       - name: 'Install jOOQ Snapshot'
         working-directory: jOOQ
-        run: mvn -DskipTests install
+        run: mvn --no-transfer-progress -DskipTests install
 
       - name: 'Checkout relevant branch'
         uses: actions/checkout@v3
