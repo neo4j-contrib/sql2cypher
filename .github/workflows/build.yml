@@ -1,0 +1,46 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.adoc'
+  pull_request:
+    paths-ignore:
+      - 'README.adoc'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Set up JDK'
+        uses: actions/setup-java@v3
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: 'Cache Maven packages'
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
+
+      - name: 'Checkout jOOQ'
+        uses: actions/checkout@v3
+        with:
+          repository: jOOQ/jOOQ
+          path: jOOQ
+
+      - name: 'Install jOOQ Snapshot'
+        working-directory: jOOQ
+        run: mvn --no-transfer-progress -DskipTests -pl jOOQ -pl jOOQ-meta -am install
+
+      - name: 'Checkout'
+        uses: actions/checkout@v3
+        with:
+          path: sql2cypher
+
+      - name: 'Clean and verify'
+        working-directory: sql2cypher
+        run: mvn --no-transfer-progress clean verify

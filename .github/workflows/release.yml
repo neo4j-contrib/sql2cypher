@@ -24,16 +24,29 @@ jobs:
         run: >
           echo "refName=${GITHUB_REF##*/}" >> $GITHUB_ENV
 
+      - name: 'Checkout jOOQ'
+        uses: actions/checkout@v3
+        with:
+          repository: jOOQ/jOOQ
+          path: jOOQ
+
+      - name: 'Install jOOQ Snapshot'
+        working-directory: jOOQ
+        run: mvn --no-transfer-progress -DskipTests -pl jOOQ -pl jOOQ-meta -am install
+
       - name: 'Checkout relevant branch'
         uses: actions/checkout@v3
         with:
+          path: sql2cypher
           ref: ${{ env.refName }}
 
       - name: 'Create jar'
+        working-directory: sql2cypher
         run: >
           ./mvnw --no-transfer-progress -Dfast clean package
 
       - name: 'Create release'
+        working-directory: sql2cypher
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./mvnw --no-transfer-progress jreleaser:full-release
