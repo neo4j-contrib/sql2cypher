@@ -56,5 +56,5 @@ RETURN p.name, toString(p.age)
 == Dependencies
 
 * https://github.com/jOOQ[jOOQ - SQL DSL]
-* https://github.com/neo4j-contrib/cypher-dsl[cypher-dsl]
-* PicoCli
+* https://github.com/neo4j-contrib/cypher-dsl[Neo4j Cypher-DSL]
+* https://github.com/remkop/picocli[PicoCli]

@@ -36,8 +36,9 @@ import org.jooq.SelectFieldOrAsterisk;
 import org.jooq.SortField;
 import org.jooq.Table;
 import org.jooq.TableField;
-import org.jooq.conf.Settings;
+import org.jooq.conf.ParseWithMetaLookups;
 import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultConfiguration;
 import org.jooq.impl.QOM;
 import org.jooq.impl.QOM.TableAlias;
 import org.neo4j.cypherdsl.core.Condition;
@@ -51,6 +52,7 @@ import org.neo4j.cypherdsl.core.SortItem;
 import org.neo4j.cypherdsl.core.StatementBuilder;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithWhere;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
+import org.neo4j.cypherdsl.core.renderer.Configuration;
 import org.neo4j.cypherdsl.core.renderer.Renderer;
 
 /**
@@ -60,52 +62,23 @@ import org.neo4j.cypherdsl.core.renderer.Renderer;
  * @author Michael J. Simons
  * @author Michael Hunger
  */
-public final class SQLToCypher {
+public final class Translator {
 
-	/**
-	 * Simple test statement.
-	 */
-	public static final String TEST_STATEMENT = """
-			SELECT t.a, t.b
-			FROM my_table AS t
-			WHERE t.a = 1
-			""";
-
-	public static void main(String[] args) {
-		var sql = (args.length == 0) ? TEST_STATEMENT : String.join(" ", args);
-		var result = SQLToCypher.withoutMappings().convert(sql);
-		System.out.println(result);
+	public static Translator defaultTranslator() {
+		return new Translator(TranslatorConfig.defaultConfig());
 	}
 
-	public static SQLToCypher withoutMappings() {
-		return new SQLToCypher(new Config());
+	public static Translator with(TranslatorConfig config) {
+		return new Translator(config);
 	}
 
-	public static SQLToCypher with(Map<String, String> tableMappings) {
-		return new SQLToCypher(new Config().with(tableMappings));
-	}
-
-	public static SQLToCypher with(Config config) {
-		return new SQLToCypher(config);
-	}
-
-	private final Config config;
+	private final TranslatorConfig config;
 
 	private final Map<Table<?>, Node> tables = new HashMap<>();
 
-	private SQLToCypher(Config config) {
-		this.config = config;
-	}
+	private Translator(TranslatorConfig config) {
 
-	private DSLContext configure(Config config) {
-		Settings jooqConfig = config.getJooqSettings();
-		DSLContext dsl = DSL.using(config.getSqlDialect(), jooqConfig);
-		dsl.configuration().set(() -> {
-			var queries = config.getTableToLabelMappings().entrySet().stream()
-					.map((e) -> (Query) DSL.createTable(e.getKey()).comment("label=" + e.getValue())).toList();
-			return dsl.meta(queries.toArray(Query[]::new));
-		});
-		return dsl;
+		this.config = config;
 	}
 
 	// Unsure how thread safe this should be (wrt the node lookup table), but this here
@@ -116,15 +89,31 @@ public final class SQLToCypher {
 		return render(statement);
 	}
 
-	private String render(ResultStatement statement) {
-		Renderer renderer = Renderer.getRenderer(this.config.getCypherDslConfig());
-		return renderer.render(statement);
+	public DSLContext createDSLContext() {
+
+		var settings = new DefaultConfiguration().settings().withParseNameCase(this.config.getParseNameCase())
+				.withRenderNameCase(this.config.getRenderNameCase())
+				.withParseWithMetaLookups(ParseWithMetaLookups.IGNORE_ON_FAILURE).withDiagnosticsLogging(true)
+				.withParseDialect(this.config.getSqlDialect());
+		var context = DSL.using(this.config.getSqlDialect(), settings);
+		context.configuration().set(() -> {
+			var queries = this.config.getTableToLabelMappings().entrySet().stream()
+					.map((e) -> (Query) DSL.createTable(e.getKey()).comment("label=" + e.getValue())).toList();
+			return context.meta(queries.toArray(Query[]::new));
+		});
+		return context;
 	}
 
 	private Select<?> parse(String sql) {
-		DSLContext dsl = configure(this.config);
+		DSLContext dsl = createDSLContext();
 		Parser parser = dsl.parser();
 		return parser.parseSelect(sql);
+	}
+
+	private String render(ResultStatement statement) {
+		Renderer renderer = Renderer.getRenderer(
+				this.config.isPrettyPrint() ? Configuration.prettyPrinting() : Configuration.defaultConfig());
+		return renderer.render(statement);
 	}
 
 	ResultStatement statement(Select<?> x) {
