@@ -43,8 +43,15 @@ jobs:
 
       - name: 'Create jar'
         working-directory: sql2cypher
-        run: >
-          ./mvnw --no-transfer-progress -Dfast clean package
+        run: ./mvnw --no-transfer-progress -Dfast clean package
+
+      - name: 'Setup all required JDKs'
+        working-directory: sql2cypher
+        run: ./mvnw jdks:setup-disco
+
+      - name: 'Assemble jlink images'
+      - working-directory: sql2cypher
+        run: ./mvnw jreleaser:assemble
 
       - name: 'Create release'
         working-directory: sql2cypher

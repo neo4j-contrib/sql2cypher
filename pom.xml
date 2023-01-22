@@ -16,7 +16,8 @@
     limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.neo4j</groupId>
@@ -82,6 +83,8 @@
 		<checkstyle.version>10.6.0</checkstyle.version>
 		<imageName>${project.artifactId}</imageName>
 		<java.version>17</java.version>
+		<jdkFilePrefix>zulu17.40.19-ca-jdk${jdkVersion}</jdkFilePrefix>
+		<jdkVersion>17.0.6</jdkVersion>
 		<jooq.version>3.18.0-SNAPSHOT</jooq.version>
 		<jreleaser-maven-plugin.version>1.4.0</jreleaser-maven-plugin.version>
 		<junit-jupiter.version>5.9.2</junit-jupiter.version>
@@ -94,11 +97,14 @@
 		<maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
 		<maven.compiler.release>${java.version}</maven.compiler.release>
+		<moditect-maven-plugin.version>1.0.0.RC2</moditect-maven-plugin.version>
 		<native.maven.plugin.version>0.9.18</native.maven.plugin.version>
 		<neo4j-cypher-dsl.version>2023.0.1</neo4j-cypher-dsl.version>
 		<picocli.version>4.7.0</picocli.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<r2dbc-spi.version>1.0.0.RELEASE</r2dbc-spi.version>
+		<reactive-streams.version>1.0.3</reactive-streams.version>
 		<sortpom-maven-plugin.version>3.2.0</sortpom-maven-plugin.version>
 		<spring-javaformat.version>0.0.35</spring-javaformat.version>
 	</properties>
@@ -112,6 +118,17 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<dependency>
+				<groupId>io.r2dbc</groupId>
+				<artifactId>r2dbc-spi</artifactId>
+				<version>${r2dbc-spi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.reactivestreams</groupId>
+				<artifactId>reactive-streams</artifactId>
+				<version>${reactive-streams.version}</version>
+			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 
@@ -364,6 +381,103 @@
 				</executions>
 			</plugin>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>default</id>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<includeScope>compile</includeScope>
+							<outputDirectory>${project.build.directory}/modules</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.moditect</groupId>
+				<artifactId>moditect-maven-plugin</artifactId>
+				<version>${moditect-maven-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>add-module-infos</id>
+						<goals>
+							<goal>add-module-info</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<outputDirectory>${project.build.directory}/modules</outputDirectory>
+							<overwriteExistingFiles>true</overwriteExistingFiles>
+							<modules>
+								<module>
+									<artifact>
+										<groupId>io.r2dbc</groupId>
+										<artifactId>r2dbc-spi</artifactId>
+										<version>${r2dbc-spi.version}</version>
+									</artifact>
+									<moduleInfoSource><![CDATA[
+										module r2dbc.spi {
+											exports io.r2dbc.spi;
+										}
+										]]></moduleInfoSource>
+								</module>
+								<module>
+									<artifact>
+										<groupId>org.reactivestreams</groupId>
+										<artifactId>reactive-streams</artifactId>
+										<version>${reactive-streams.version}</version>
+									</artifact>
+									<moduleInfoSource><![CDATA[
+										module org.reactivestreams {
+											exports org.reactivestreams;
+										}
+										]]></moduleInfoSource>
+								</module>
+							</modules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.jreleaser</groupId>
+				<artifactId>jdks-maven-plugin</artifactId>
+				<version>1.4.0</version>
+				<configuration>
+					<pkgs>
+						<pkg>
+							<name>linux-x86_64</name>
+							<platform>linux-x86_64</platform>
+							<version>${jdkVersion}</version>
+						</pkg>
+						<pkg>
+							<name>linux-aarch_64</name>
+							<platform>linux-aarch64</platform>
+							<version>${jdkVersion}</version>
+							<archiveType>tar.gz</archiveType>
+						</pkg>
+						<pkg>
+							<name>osx-x86_64</name>
+							<platform>osx-x86_64</platform>
+							<version>${jdkVersion}</version>
+						</pkg>
+						<pkg>
+							<name>osx-aarch_64</name>
+							<platform>osx-aarch64</platform>
+							<version>${jdkVersion}</version>
+						</pkg>
+						<pkg>
+							<name>windows-x86_64</name>
+							<platform>windows-x86_64</platform>
+							<version>${jdkVersion}</version>
+						</pkg>
+					</pkgs>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.jreleaser</groupId>
 				<artifactId>jreleaser-maven-plugin</artifactId>
 				<version>${jreleaser-maven-plugin.version}</version>
@@ -372,6 +486,65 @@
 						<project>
 							<name>${project.artifactId}</name>
 						</project>
+						<assemble>
+							<jlink>
+								<sql2cypher>
+									<active>ALWAYS</active>
+									<exported>true</exported>
+									<stereotype>CLI</stereotype>
+									<imageNameTransform>${imageName}</imageNameTransform>
+									<targetJdks>
+										<targetJdk>
+											<path>
+												${project.build.directory}/jdks/linux-x86_64/${jdkFilePrefix}-linux_x64
+											</path>
+											<platform>linux-x86_64</platform>
+										</targetJdk>
+										<targetJdk>
+											<path>
+												${project.build.directory}/jdks/linux-aarch_64/${jdkFilePrefix}-linux_aarch64
+											</path>
+											<platform>linux-aarch_64</platform>
+										</targetJdk>
+										<targetJdk>
+											<path>
+												${project.build.directory}/jdks/osx-x86_64/${jdkFilePrefix}-macosx_x64
+											</path>
+											<platform>osx-x86_64</platform>
+										</targetJdk>
+										<targetJdk>
+											<path>
+												${project.build.directory}/jdks/osx-aarch_64/${jdkFilePrefix}-macosx_aarch64
+											</path>
+											<platform>osx-aarch_64</platform>
+										</targetJdk>
+										<targetJdk>
+											<path>
+												${project.build.directory}/jdks/windows-x86_64/${jdkFilePrefix}-win_x64
+											</path>
+											<platform>windows-x86_64</platform>
+										</targetJdk>
+									</targetJdks>
+									<jdeps>
+										<enabled>true</enabled>
+										<multiRelease>${java.version}</multiRelease>
+										<ignoreMissingDeps>true</ignoreMissingDeps>
+									</jdeps>
+									<mainJar>
+										<path>${project.build.directory}/${project.build.finalName}.jar</path>
+									</mainJar>
+									<jars>
+										<jar>
+											<pattern>${project.build.directory}/modules/*.jar</pattern>
+										</jar>
+									</jars>
+									<java>
+										<mainModule>org.neo4j.sql2cypher</mainModule>
+										<mainClass>${mainClass}</mainClass>
+									</java>
+								</sql2cypher>
+							</jlink>
+						</assemble>
 						<release>
 							<github>
 								<skipTag>true</skipTag>
