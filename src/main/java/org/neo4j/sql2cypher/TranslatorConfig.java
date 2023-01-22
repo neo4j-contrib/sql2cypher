@@ -29,7 +29,14 @@ import org.neo4j.cypherdsl.core.renderer.Configuration;
  * @author Michael Hunger
  * @author Michael J. Simons
  */
-public final class Config {
+public final class TranslatorConfig {
+
+	/**
+	 * {@return a new builder} for creating a new configuration from scratch
+	 */
+	public static TranslatorConfig.Builder builder() {
+		return Builder.of()
+	}
 
 	private final Settings jooqSettings;
 
@@ -39,20 +46,24 @@ public final class Config {
 
 	private final Configuration cypherDslConfig;
 
-	public Config() {
+	private TranslatorConfig(Builder builder) {
+
+	}
+
+	public TranslatorConfig() {
 		this(Map.of(), defaultSettings(), SQLDialect.DEFAULT, Configuration.prettyPrinting());
 	}
 
-	public Config(Map<String, String> tableToLabelMappings, Settings jooqSettings, SQLDialect sqlDialect,
-			Configuration cypherDslConfig) {
+	public TranslatorConfig(Map<String, String> tableToLabelMappings, Settings jooqSettings, SQLDialect sqlDialect,
+	                        Configuration cypherDslConfig) {
 		this.tableToLabelMappings = Map.copyOf(tableToLabelMappings);
 		this.sqlDialect = sqlDialect;
 		this.jooqSettings = ((Settings) jooqSettings.clone()).withParseDialect(this.sqlDialect);
 		this.cypherDslConfig = cypherDslConfig;
 	}
 
-	public Config with(Map<String, String> tableMappings) {
-		return new Config(tableMappings, this.jooqSettings, this.sqlDialect, this.cypherDslConfig);
+	public TranslatorConfig with(Map<String, String> tableMappings) {
+		return new TranslatorConfig(tableMappings, this.jooqSettings, this.sqlDialect, this.cypherDslConfig);
 	}
 
 	private static Settings defaultSettings() {
@@ -67,7 +78,7 @@ public final class Config {
 	}
 
 	public Map<String, String> getTableToLabelMappings() {
-		return Map.copyOf(this.tableToLabelMappings);
+		return this.tableToLabelMappings;
 	}
 
 	public SQLDialect getSqlDialect() {
@@ -78,4 +89,31 @@ public final class Config {
 		return this.cypherDslConfig;
 	}
 
+	/**
+	 * A builder to create new instances of {@link TranslatorConfig configurations}.
+	 */
+	public static class Builder {
+
+		private Settings jooqSettings;
+
+		private Map<String, String> tableToLabelMappings;
+
+		private SQLDialect sqlDialect;
+
+		private Configuration cypherDslConfig;
+
+		static Builder of() {
+			return new Builder();
+		}
+
+		private Builder() {
+		}
+
+		/**
+		 * @return a new immutable configuration
+		 */
+		public TranslatorConfig build() {
+			return new TranslatorConfig(this);
+		}
+	}
 }

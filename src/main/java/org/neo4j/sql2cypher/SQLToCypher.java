@@ -78,26 +78,26 @@ public final class SQLToCypher {
 	}
 
 	public static SQLToCypher withoutMappings() {
-		return new SQLToCypher(new Config());
+		return new SQLToCypher(new TranslatorConfig());
 	}
 
 	public static SQLToCypher with(Map<String, String> tableMappings) {
-		return new SQLToCypher(new Config().with(tableMappings));
+		return new SQLToCypher(new TranslatorConfig().with(tableMappings));
 	}
 
-	public static SQLToCypher with(Config config) {
+	public static SQLToCypher with(TranslatorConfig config) {
 		return new SQLToCypher(config);
 	}
 
-	private final Config config;
+	private final TranslatorConfig config;
 
 	private final Map<Table<?>, Node> tables = new HashMap<>();
 
-	private SQLToCypher(Config config) {
+	private SQLToCypher(TranslatorConfig config) {
 		this.config = config;
 	}
 
-	private DSLContext configure(Config config) {
+	private DSLContext configure(TranslatorConfig config) {
 		Settings jooqConfig = config.getJooqSettings();
 		DSLContext dsl = DSL.using(config.getSqlDialect(), jooqConfig);
 		dsl.configuration().set(() -> {
