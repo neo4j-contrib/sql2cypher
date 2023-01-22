@@ -32,6 +32,7 @@ import picocli.CommandLine.Parameters;
  *
  * @author Michael J. Simons
  */
+@SuppressWarnings({"FieldMayBeFinal"})
 @Command(name = "sql2cypher", mixinStandardHelpOptions = true,
 		description = "Translates SQL statements to Cypher queries.", sortOptions = false,
 		versionProvider = ManifestVersionProvider.class, subcommands = { GenerateCompletion.class, HelpCommand.class })
