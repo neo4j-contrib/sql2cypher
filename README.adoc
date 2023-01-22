@@ -47,6 +47,7 @@ bsdtar xvf sql2cypher-1.0-SNAPSHOT-osx-aarch_64.zip --strip-components=1 -C sql2
 
 == Usage
 
+[source,console]
 ----
 Usage: sql2cypher [-hV] [--disable-pretty-printing]
                   [--parse-name-case=<parseNameCase>]

@@ -25,6 +25,27 @@ There's a `fast` profile that will skip all the tests and validations:
 ./mvnw -Dfast package
 ----
 
+The build will create an assembly inside the `target` directory, with two executable scripts inside the `bin` sub-directory:
+
+[source,console]
+----
+➜  sql2cypher git:(main) ✗ tree target/assembly
+target/assembly
+├── bin
+│   ├── sql2cypher
+│   └── sql2cypher.bat
+└── lib
+    ├── apiguardian-api-1.1.2.jar
+    ├── jooq-3.18.0-SNAPSHOT.jar
+    ├── neo4j-cypher-dsl-2023.0.1.jar
+    ├── picocli-4.7.0.jar
+    ├── r2dbc-spi-1.0.0.RELEASE.jar
+    ├── reactive-streams-1.0.3.jar
+    └── sql2cypher-1.0-SNAPSHOT.jar
+
+2 directories, 9 files
+----
+
 === Native image (GraalVM) support
 
 There's somewhat support to run this application as native image, but jOOQ itself is not yet fully GraalVM compatible (see https://github.com/jOOQ/jOOQ/issues/8779[jOOQ 8779]).
@@ -49,7 +70,7 @@ file target/sql2cypher
 Test the generated image like this:
 
 .Testing native image
-[source,shell]
+[source,bash]
 ----
 time ./target/sql2cypher 'SELECT p.name, cast(p.age as STRING)
 FROM "Person" AS p
@@ -57,7 +78,7 @@ WHERE p.age = 18 + rand()' 2>/dev/null
 ----
 
 .Output and runtime native image
-[source]
+[source,console]
 ----
 MATCH (p:Person)
 WHERE p.age = (18 + rand())

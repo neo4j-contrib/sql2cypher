@@ -47,11 +47,11 @@ jobs:
 
       - name: 'Setup all required JDKs'
         working-directory: sql2cypher
-        run: ./mvnw jdks:setup-disco
+        run: ./mvnw --no-transfer-progress jdks:setup-disco
 
       - name: 'Assemble jlink images'
         working-directory: sql2cypher
-        run: ./mvnw jreleaser:assemble
+        run: ./mvnw --no-transfer-progress jreleaser:assemble
 
       - name: 'Create release'
         working-directory: sql2cypher
