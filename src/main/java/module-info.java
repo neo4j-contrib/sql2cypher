@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module org.neo4j.sqltocypher {
+module org.neo4j.sql2cypher {
     requires org.jooq;
     requires org.neo4j.cypherdsl.core;
+    requires info.picocli;
+
+    opens org.neo4j.sql2cypher to info.picocli;
 }

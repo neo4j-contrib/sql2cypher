@@ -42,8 +42,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Michael J. Simons
+ * @author Michael Hunger
  */
-class SQLToCypherTest {
+class TranslatorTest {
 
 	static List<TestData> getTestData(Path path) {
 		try (var asciidoctor = Asciidoctor.Factory.create()) {
@@ -59,7 +60,7 @@ class SQLToCypherTest {
 		}
 	}
 
-	static Stream<Arguments> simple() throws Exception {
+	static Stream<Arguments> simple() {
 
 		var path = ClassLoader.getSystemResource("simple.adoc").getPath();
 		var parentFolder = new File(path).getParentFile();
@@ -71,14 +72,15 @@ class SQLToCypherTest {
 		if (files == null) {
 			return Stream.empty();
 		}
-		return Arrays.stream(files).peek(System.out::println).flatMap((file) -> getTestData(file.toPath()).stream()
+		return Arrays.stream(files).flatMap((file) -> getTestData(file.toPath()).stream()
 				.map((t) -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings())));
 	}
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource
 	void simple(String name, String sql, String expected, Map<String, String> tableMappings) {
-		assertThat(SQLToCypher.with(tableMappings).convert(sql)).isEqualTo(expected);
+		assertThat(Translator.with(TranslatorConfig.builder().withTableToLabelMappings(tableMappings).build())
+				.convert(sql)).isEqualTo(expected);
 	}
 
 	private static class TestDataExtractor extends Treeprocessor {
