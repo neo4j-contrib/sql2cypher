@@ -28,6 +28,35 @@ More concrete examples can be found in the link:src/test/resources[TCK].
 * link:src/test/resources/expressions.adoc[Expressions]
 * link:src/test/resources/predicates.adoc[Predicates]
 
+== Usage
+
+----
+Usage: sql2cypher [-hV] [--disable-pretty-printing]
+                  [--parse-name-case=<parseNameCase>]
+                  [--sql-dialect=<sqlDialect>]
+                  [--table-to-label-mapping=<String=String>]... <sql> [COMMAND]
+Translates SQL statements to Cypher queries.
+      <sql>       Any valid SQL statement that should be translated to Cypher
+      --parse-name-case=<parseNameCase>
+                  How to parse names; valid values are: AS_IS, LOWER,
+                    LOWER_IF_UNQUOTED, UPPER, UPPER_IF_UNQUOTED, DEFAULT and
+                    the default is LOWER_IF_UNQUOTED
+      --table-to-label-mapping=<String=String>
+                  A table name that should be mapped to a specific label,
+                    repeat for multiple mappings
+      --sql-dialect=<sqlDialect>
+                  The SQL dialect to use for parsing; valid values are:
+                    DEFAULT, CUBRID, DERBY, FIREBIRD, H2, HSQLDB, IGNITE,
+                    MARIADB, MYSQL, POSTGRES, SQLITE, YUGABYTEDB and the
+                    default is DEFAULT
+      --disable-pretty-printing
+                  Disables pretty printing
+  -h, --help      Show this help message and exit.
+  -V, --version   Print version information and exit.
+Commands:
+  help  Display help information about the specified command.
+----
+
 == Build & Usage
 
 .Build
