@@ -79,6 +79,7 @@
 		<artifactsDir>${project.build.directory}</artifactsDir>
 		<asciidoctorj.version>2.5.7</asciidoctorj.version>
 		<assertj.version>3.24.1</assertj.version>
+		<checkstyle.version>10.6.0</checkstyle.version>
 		<imageName>${project.artifactId}</imageName>
 		<java.version>17</java.version>
 		<jreleaser-maven-plugin.version>1.4.0</jreleaser-maven-plugin.version>
@@ -86,6 +87,7 @@
 		<license-maven-plugin.version>4.2.rc2</license-maven-plugin.version>
 		<mainClass>org.neo4j.sql2cypher.SQLToCypher</mainClass>
 		<maven-assembly-plugin.version>3.4.2</maven-assembly-plugin.version>
+		<maven-checkstyle-plugin.version>3.2.1</maven-checkstyle-plugin.version>
 		<maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
 		<maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
 		<maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
@@ -95,6 +97,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sortpom-maven-plugin.version>3.2.0</sortpom-maven-plugin.version>
+		<spring-javaformat.version>0.0.35</spring-javaformat.version>
 	</properties>
 
 	<dependencyManagement>
@@ -148,6 +151,33 @@
 	<build>
 		<pluginManagement>
 			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-checkstyle-plugin</artifactId>
+					<version>${maven-checkstyle-plugin.version}</version>
+					<configuration>
+						<excludes>**/module-info.java</excludes>
+						<includeTestSourceDirectory>true</includeTestSourceDirectory>
+						<configLocation>etc/checkstyle/config.xml</configLocation>
+						<suppressionsLocation>etc/checkstyle/suppressions.xml</suppressionsLocation>
+						<inputEncoding>${project.build.sourceEncoding}</inputEncoding>
+						<consoleOutput>true</consoleOutput>
+						<failsOnError>true</failsOnError>
+						<includeTestSourceDirectory>true</includeTestSourceDirectory>
+					</configuration>
+					<dependencies>
+						<dependency>
+							<groupId>com.puppycrawl.tools</groupId>
+							<artifactId>checkstyle</artifactId>
+							<version>${checkstyle.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>io.spring.javaformat</groupId>
+							<artifactId>spring-javaformat-checkstyle</artifactId>
+							<version>${spring-javaformat.version}</version>
+						</dependency>
+					</dependencies>
+				</plugin>
 				<plugin>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>${maven-compiler-plugin.version}</version>
@@ -208,7 +238,6 @@
 						<exclude>**/*.extension</exclude>
 						<exclude>**/README</exclude>
 						<exclude>**/org.mockito.plugins.MockMaker</exclude>
-						<exclude>**/package-info.java</exclude>
 					</excludes>
 				</configuration>
 				<executions>
@@ -218,6 +247,34 @@
 							<goal>check</goal>
 						</goals>
 						<phase>validate</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>io.spring.javaformat</groupId>
+				<artifactId>spring-javaformat-maven-plugin</artifactId>
+				<version>${spring-javaformat.version}</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>validate</goal>
+						</goals>
+						<phase>validate</phase>
+						<inherited>true</inherited>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>checkstyle-validation</id>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<phase>validate</phase>
+						<inherited>true</inherited>
 					</execution>
 				</executions>
 			</plugin>
@@ -348,6 +405,7 @@
 				<skipITs>true</skipITs>
 				<skipNativeBuild>true</skipNativeBuild>
 				<skipTests>true</skipTests>
+				<spring-javaformat.skip>true</spring-javaformat.skip>
 			</properties>
 		</profile>
 		<profile>
