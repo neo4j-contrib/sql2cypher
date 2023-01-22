@@ -50,7 +50,7 @@ jobs:
         run: ./mvnw jdks:setup-disco
 
       - name: 'Assemble jlink images'
-      - working-directory: sql2cypher
+        working-directory: sql2cypher
         run: ./mvnw jreleaser:assemble
 
       - name: 'Create release'
