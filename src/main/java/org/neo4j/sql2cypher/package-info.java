@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-module org.neo4j.sqltocypher {
-    requires org.jooq;
-    requires org.neo4j.cypherdsl.core;
-}
+/**
+ * Contains the sql2cypher translator and a CLI application.
+ */
+package org.neo4j.sql2cypher;
