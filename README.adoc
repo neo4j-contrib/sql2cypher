@@ -53,6 +53,45 @@ WHERE p.age = (18 + rand())
 RETURN p.name, toString(p.age)
 ----
 
+=== Native Image
+
+Sql2Cypher comes with native image support, so can build a binary that starts immediately and can be used in mass-translation from the command line.
+
+It needs a Java 17+ version of graalvm installed, e.g. via SDKman: `sdk install java 22.3.r17-grl`
+
+.Building native image
+[source,shell]
+----
+gu install native-image
+# Downloading: Component catalog from www.graalvm.org
+# Processing Component: Native Image
+# Component Native Image (org.graalvm.native-image) is already installed.
+
+./mvnw -Pnative package
+# ...  Finished generating 'sql2cypher' in 49,7s.
+
+file  target/sql2cypher
+# target/sql2cypher: Mach-O 64-bit executable arm64
+----
+
+.Testing native image
+[source,shell]
+----
+time ./target/sql2cypher 'SELECT p.name, cast(p.age as STRING)
+FROM "Person" AS p
+WHERE p.age = 18 + rand()' 2>/dev/null
+----
+
+.Output and Runtime native image
+[source]
+----
+MATCH (p:Person)
+WHERE p.age = (18 + rand())
+RETURN p.name, toString(p.age)
+
+# 0,01s user 0,01s system 73% cpu 0,025 total
+----
+
 == Dependencies
 
 * https://github.com/jOOQ[jOOQ - SQL DSL]
