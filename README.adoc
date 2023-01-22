@@ -8,25 +8,42 @@ It is currently in a pre-alpha stage.
 
 For example:
 
-[source,SQL]
+[source,sql]
 ----
 SELECT t.a, t.b
 FROM my_table AS t
 WHERE t.a = 1
 ----
 
-[source,Cypher]
+can be translated into
+
+[source,cypher]
 ----
 MATCH (T:`MY_TABLE`) 
 WHERE T.A = 1 
 RETURN T.A, T.B
 ----
 
-More concrete examples can be found in the link:src/test/resources[TCK].
+More examples can be found in the link:src/test/resources[TCK].
 
 * link:src/test/resources/simple.adoc[Simple Patterns]
 * link:src/test/resources/expressions.adoc[Expressions]
 * link:src/test/resources/predicates.adoc[Predicates]
+
+== Download
+
+Please go to https://github.com/neo4j-contrib/sql2cypher/releases/tag/early-access[the early access download] where we offer a bunch of binaries for various operating systems and architectures.
+These binaries come with a dedicated and prepackaged JVM, no need to install Java separately.
+
+Here's an example for macOS on Apple silicon, please adapt as necessary for your system and architecture:
+
+[source,bash]
+----
+curl -LO https://github.com/neo4j-contrib/sql2cypher/releases/download/early-access/sql2cypher-1.0-SNAPSHOT-osx-aarch_64.zip
+mkdir -p sql2cypher
+bsdtar xvf sql2cypher-1.0-SNAPSHOT-osx-aarch_64.zip --strip-components=1 -C sql2cypher
+./sql2cypher/bin/sql2cypher -V
+----
 
 == Usage
 
@@ -57,69 +74,9 @@ Commands:
   help  Display help information about the specified command.
 ----
 
-== Build & Usage
+== Build
 
-.Build
-[source,shell]
-----
-./mvnw verify
-./mvnw package
-----
-
-.Execute
-[source,shell]
-----
-./target/assembly/bin/sql2cypher 'SELECT p.name, cast(p.age as STRING)
-FROM "Person" AS p
-WHERE p.age = 18 + rand()'
-----
-
-.Output
-[source,cypher]
-----
-MATCH (p:Person)
-WHERE p.age = (18 + rand())
-RETURN p.name, toString(p.age)
-----
-
-=== Native Image
-
-Sql2Cypher comes with native image support, so can build a binary that starts immediately and can be used in mass-translation from the command line.
-
-It needs a Java 17+ version of graalvm installed, e.g. via SDKman: `sdk install java 22.3.r17-grl`
-
-.Building native image
-[source,shell]
-----
-gu install native-image
-# Downloading: Component catalog from www.graalvm.org
-# Processing Component: Native Image
-# Component Native Image (org.graalvm.native-image) is already installed.
-
-./mvnw -Pnative package
-# ...  Finished generating 'sql2cypher' in 49,7s.
-
-file  target/sql2cypher
-# target/sql2cypher: Mach-O 64-bit executable arm64
-----
-
-.Testing native image
-[source,shell]
-----
-time ./target/sql2cypher 'SELECT p.name, cast(p.age as STRING)
-FROM "Person" AS p
-WHERE p.age = 18 + rand()' 2>/dev/null
-----
-
-.Output and Runtime native image
-[source]
-----
-MATCH (p:Person)
-WHERE p.age = (18 + rand())
-RETURN p.name, toString(p.age)
-
-# 0,01s user 0,01s system 73% cpu 0,025 total
-----
+Please head over to our link:CONTRIBUTING.adoc[contributing instruction] to learn about build requirements, how to build this project and additional topics like native image with GraalVM.
 
 == Dependencies
 

@@ -4,7 +4,7 @@
 
 JDK 17 and Maven is required. Please run to test and package the project:
 
-WARNING: For the time beeing, you need to install a snapshot version of https://github.com/jOOQ/jOOQ[jOOQ]
+WARNING: For the time being, you need to install a snapshot version of https://github.com/jOOQ/jOOQ[jOOQ]
 
 [source,bash]
 ----
@@ -15,34 +15,63 @@ mvn -DskipTests -pl jOOQ -pl jOOQ-meta -am install
 
 [source,bash]
 ----
-./mvnw clean verify
+./mvnw verify
 ----
 
 There's a `fast` profile that will skip all the tests and validations:
 
 [source,bash]
 ----
-./mvnw -Dfast clean package
+./mvnw -Dfast package
 ----
 
 === Native image (GraalVM) support
 
 There's somewhat support to run this application as native image, but jOOQ itself is not yet fully GraalVM compatible (see https://github.com/jOOQ/jOOQ/issues/8779[jOOQ 8779]).
 
-You can try with GraalVM 22.3.r17 and native image installed via
+Please install GraalVM 22.3 for Java 17 and native image. One way is https://sdkman.io[SDKMAN!]:
 
 [source,bash]
 ----
-./mvnw -Dnative clean package
-./target/sql2cypher
+sdk install java 22.3.r17-grl
+gu install native-image
+----
+
+Afterwards you can run our build for native image like this:
+
+[source,bash]
+----
+sdk use java 22.3.r17-grl
+./mvnw -Dnative package
+file target/sql2cypher
+----
+
+Test the generated image like this:
+
+.Testing native image
+[source,shell]
+----
+time ./target/sql2cypher 'SELECT p.name, cast(p.age as STRING)
+FROM "Person" AS p
+WHERE p.age = 18 + rand()' 2>/dev/null
+----
+
+.Output and runtime native image
+[source]
+----
+MATCH (p:Person)
+WHERE p.age = (18 + rand())
+RETURN p.name, toString(p.age)
+
+0,01s user 0,01s system 73% cpu 0,025 total
 ----
 
 The necessary `reflection-config.json` has been created partially via the GraalVM agent run like this
 
 [source,bash]
 ----
-./mvnw -Dfast clean package
-JAVA_OPTS=-agentlib:native-image-agent=config-output-dir=target/generated-native-image-config target/assembly/bin/sql2cypher
+./mvnw -Dfast package
+JAVA_OPTS=-agentlib:native-image-agent=config-output-dir=target/generated-native-image-config target/assembly/bin/sql2cypher "SELECT 1"
 ----
 
 And a printing breakpoint in the constructor of `org.jooq.impl.ArrayDataType.ArrayDataType` with the following content:

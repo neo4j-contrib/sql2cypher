@@ -16,8 +16,7 @@
     limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.neo4j</groupId>
@@ -492,36 +491,26 @@
 									<active>ALWAYS</active>
 									<exported>true</exported>
 									<stereotype>CLI</stereotype>
-									<imageNameTransform>${imageName}</imageNameTransform>
+									<imageName>${imageName}-{{projectVersion}}</imageName>
 									<targetJdks>
 										<targetJdk>
-											<path>
-												${project.build.directory}/jdks/linux-x86_64/${jdkFilePrefix}-linux_x64
-											</path>
+											<path>${project.build.directory}/jdks/linux-x86_64/${jdkFilePrefix}-linux_x64</path>
 											<platform>linux-x86_64</platform>
 										</targetJdk>
 										<targetJdk>
-											<path>
-												${project.build.directory}/jdks/linux-aarch_64/${jdkFilePrefix}-linux_aarch64
-											</path>
+											<path>${project.build.directory}/jdks/linux-aarch_64/${jdkFilePrefix}-linux_aarch64</path>
 											<platform>linux-aarch_64</platform>
 										</targetJdk>
 										<targetJdk>
-											<path>
-												${project.build.directory}/jdks/osx-x86_64/${jdkFilePrefix}-macosx_x64
-											</path>
+											<path>${project.build.directory}/jdks/osx-x86_64/${jdkFilePrefix}-macosx_x64</path>
 											<platform>osx-x86_64</platform>
 										</targetJdk>
 										<targetJdk>
-											<path>
-												${project.build.directory}/jdks/osx-aarch_64/${jdkFilePrefix}-macosx_aarch64
-											</path>
+											<path>${project.build.directory}/jdks/osx-aarch_64/${jdkFilePrefix}-macosx_aarch64</path>
 											<platform>osx-aarch_64</platform>
 										</targetJdk>
 										<targetJdk>
-											<path>
-												${project.build.directory}/jdks/windows-x86_64/${jdkFilePrefix}-win_x64
-											</path>
+											<path>${project.build.directory}/jdks/windows-x86_64/${jdkFilePrefix}-win_x64</path>
 											<platform>windows-x86_64</platform>
 										</targetJdk>
 									</targetJdks>
