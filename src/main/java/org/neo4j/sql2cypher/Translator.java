@@ -373,8 +373,14 @@ public final class Translator {
 		else if (c instanceof QOM.Gt<?> e) {
 			return expression(e.$arg1()).gt(expression(e.$arg2()));
 		}
+		else if (c instanceof QOM.Ge<?> e) {
+			return expression(e.$arg1()).gte(expression(e.$arg2()));
+		}
 		else if (c instanceof QOM.Lt<?> e) {
 			return expression(e.$arg1()).lt(expression(e.$arg2()));
+		}
+		else if (c instanceof QOM.Le<?> e) {
+			return expression(e.$arg1()).lte(expression(e.$arg2()));
 		}
 		else if (c instanceof QOM.Ne<?> e) {
 			return expression(e.$arg1()).ne(expression(e.$arg2()));

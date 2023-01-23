@@ -48,7 +48,7 @@ The input
 
 [source,sql,id=t2_0,name=predicates_with_arithmetics]
 ----
-SELECT 1 FROM p WHERE 1 = 1 AND 2 > 1 AND 1 < 2 AND 1 != 2
+SELECT 1 FROM p WHERE 1 = 1 AND 2 > 1 AND 1 < 2 AND 1 <= 2 AND 2 >= 1 AND 1 != 2
 ----
 
 will be trtanspiled to
@@ -59,6 +59,8 @@ MATCH (:p)
 WHERE (1 = 1
   AND 2 > 1
   AND 1 < 2
+  AND 1 <= 2
+  AND 2 >= 1
   AND 1 <> 2)
 RETURN 1
 ----
