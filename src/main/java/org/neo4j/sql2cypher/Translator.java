@@ -30,6 +30,7 @@ import org.jooq.Param;
 import org.jooq.Parser;
 import org.jooq.QualifiedAsterisk;
 import org.jooq.Query;
+import org.jooq.QueryPart;
 import org.jooq.Select;
 import org.jooq.SelectField;
 import org.jooq.SelectFieldOrAsterisk;
@@ -160,7 +161,7 @@ public final class Translator {
 			return node(q.$table()).getSymbolicName().orElseGet(() -> Cypher.name(q.$table().getName()));
 		}
 		else {
-			throw new IllegalArgumentException("unsupported: " + t);
+			throw unsupported(t);
 		}
 	}
 
@@ -172,7 +173,7 @@ public final class Translator {
 			return expression(f);
 		}
 		else {
-			throw new IllegalArgumentException("unsupported: " + s);
+			throw unsupported(s);
 		}
 	}
 
@@ -212,7 +213,7 @@ public final class Translator {
 			return expression(e.$arg1()).divide(expression(e.$arg2()));
 		}
 		else if (f instanceof QOM.Neg<?> e) {
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 
 		// https://neo4j.com/docs/cypher-manual/current/functions/mathematical-numeric/
@@ -298,48 +299,43 @@ public final class Translator {
 		}
 
 		// https://neo4j.com/docs/cypher-manual/current/functions/string/
-		else if (f instanceof QOM.Cast<?> e) {
-			if (e.$dataType().isString()) {
-				return Functions.toString(expression(e.$field()));
-			}
-			else {
-				throw new IllegalArgumentException("unsupported: " + f);
-			}
+		else if (f instanceof QOM.CharLength e) {
+			return Functions.size(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Left e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Lower e) {
 			return org.neo4j.cypherdsl.core.Functions.toLower(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Ltrim e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Replace e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Reverse e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Right e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Rtrim e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Substring e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
 		else if (f instanceof QOM.Trim e) {
 			if (e.$arg2() != null) {
-				throw new IllegalArgumentException("unsupported: " + e);
+				throw unsupported(e);
 			}
 			else {
 				return Functions.trim(expression(e.$arg1()));
@@ -347,11 +343,43 @@ public final class Translator {
 		}
 		else if (f instanceof QOM.Upper e) {
 			// TODO: Support this in Cypher-DSL
-			throw new IllegalArgumentException("unsupported: " + e);
+			throw unsupported(e);
 		}
+
+		// https://neo4j.com/docs/cypher-manual/current/functions/scalar/
+		else if (f instanceof QOM.Coalesce<?> e) {
+			return Functions.coalesce(e.$arg1().stream().map(this::expression).toArray(Expression[]::new));
+		}
+		else if (f instanceof QOM.Nvl<?> e) {
+			return Functions.coalesce(expression(e.$arg1()), expression(e.$arg2()));
+		}
+
+		// Others
+		else if (f instanceof QOM.Cast<?> e) {
+			if (e.$dataType().isString()) {
+				return Functions.toString(expression(e.$field()));
+			}
+			else if (e.$dataType().isBoolean()) {
+				return Functions.toBoolean(expression(e.$field()));
+			}
+			else if (e.$dataType().isFloat()) {
+				return Functions.toFloat(expression(e.$field()));
+			}
+			else if (e.$dataType().isInteger()) {
+				return Functions.toInteger(expression(e.$field()));
+			}
+			else {
+				throw unsupported(f);
+			}
+		}
+
 		else {
-			throw new IllegalArgumentException("unsupported: " + f);
+			throw unsupported(f);
 		}
+	}
+
+	private IllegalArgumentException unsupported(QueryPart p) {
+		return new IllegalArgumentException("Unsupported SQL expression: " + p);
 	}
 
 	private Condition condition(org.jooq.Condition c) {
@@ -392,7 +420,7 @@ public final class Translator {
 			return expression(e.$arg1()).isNotNull();
 		}
 		else {
-			throw new IllegalArgumentException("unsupported: " + c);
+			throw unsupported(c);
 		}
 	}
 
