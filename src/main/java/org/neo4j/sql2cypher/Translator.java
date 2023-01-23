@@ -42,6 +42,7 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.jooq.impl.QOM;
 import org.jooq.impl.QOM.TableAlias;
+import org.neo4j.cypherdsl.core.Case;
 import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
@@ -352,6 +353,42 @@ public final class Translator {
 		}
 		else if (f instanceof QOM.Nvl<?> e) {
 			return Functions.coalesce(expression(e.$arg1()), expression(e.$arg2()));
+		}
+
+		// https://neo4j.com/docs/cypher-manual/current/syntax/expressions/
+		else if (f instanceof QOM.Nullif<?> e) {
+			return Cypher.caseExpression().when(expression(e.$arg1()).eq(expression(e.$arg2())))
+					.then(Cypher.literalNull()).elseDefault(expression(e.$arg1()));
+		}
+		else if (f instanceof QOM.Nvl2<?> e) {
+			return Cypher.caseExpression().when(expression(e.$arg1()).isNotNull()).then(expression(e.$arg2()))
+					.elseDefault(expression(e.$arg3()));
+		}
+		else if (f instanceof QOM.CaseSimple<?, ?> e) {
+			Case c = Cypher.caseExpression(expression(e.$value()));
+
+			for (var w : e.$when()) {
+				c = c.when(expression(w.$1())).then(expression(w.$2()));
+			}
+
+			if (e.$else() != null) {
+				c = ((Case.CaseEnding) c).elseDefault(expression(e.$else()));
+			}
+
+			return c;
+		}
+		else if (f instanceof QOM.CaseSearched<?> e) {
+			Case c = Cypher.caseExpression();
+
+			for (var w : e.$when()) {
+				c = c.when(condition(w.$1())).then(expression(w.$2()));
+			}
+
+			if (e.$else() != null) {
+				c = ((Case.CaseEnding) c).elseDefault(expression(e.$else()));
+			}
+
+			return c;
 		}
 
 		// Others

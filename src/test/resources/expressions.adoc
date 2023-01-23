@@ -109,7 +109,18 @@ The input
 
 [source,sql,id=t6_0,name=select_with_string_functions]
 ----
-SELECT coalesce(1, 2), coalesce(1, 2, 3), nvl(1, 2), cast('1' as boolean), cast(1 as float), cast(1 as double precision), cast(1 as real), cast(1 as tinyint), cast(1 as smallint), cast(1 as int), cast(1 as bigint)
+SELECT
+    coalesce(1, 2),
+    coalesce(1, 2, 3),
+    nvl(1, 2),
+    cast('1' as boolean),
+    cast(1 as float),
+    cast(1 as double precision),
+    cast(1 as real),
+    cast(1 as tinyint),
+    cast(1 as smallint),
+    cast(1 as int),
+    cast(1 as bigint)
 ----
 
 will be transpiled to
@@ -117,4 +128,67 @@ will be transpiled to
 [source,cypher,id=t6_0_expected]
 ----
 RETURN coalesce(1, 2), coalesce(1, 2, 3), coalesce(1, 2), toBoolean('1'), toFloat(1), toFloat(1), toFloat(1), toInteger(1), toInteger(1), toInteger(1), toInteger(1)
+----
+
+
+== Query syntax expressions
+
+See https://neo4j.com/docs/cypher-manual/current/syntax/expressions
+
+=== `CASE` simple
+
+The input
+
+[source,sql,id=t7_0,name=select_with_string_functions]
+----
+SELECT
+    CASE 1 WHEN 2 THEN 3 END,
+    CASE 1 WHEN 2 THEN 3 ELSE 4 END,
+    CASE 1 WHEN 2 THEN 3 WHEN 4 THEN 5 END,
+    CASE 1 WHEN 2 THEN 3 WHEN 4 THEN 5 ELSE 6 END
+----
+
+will be transpiled to
+
+[source,cypher,id=t7_0_expected]
+----
+RETURN CASE 1 WHEN 2 THEN 3 END, CASE 1 WHEN 2 THEN 3 ELSE 4 END, CASE 1 WHEN 2 THEN 3 WHEN 4 THEN 5 END, CASE 1 WHEN 2 THEN 3 WHEN 4 THEN 5 ELSE 6 END
+----
+
+=== `CASE` searched
+
+The input
+
+[source,sql,id=t7_1,name=select_with_string_functions]
+----
+SELECT
+    CASE WHEN 1 = 2 THEN 3 END,
+    CASE WHEN 1 = 2 THEN 3 ELSE 4 END,
+    CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 END,
+    CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 ELSE 7 END
+----
+
+will be transpiled to
+
+[source,cypher,id=t7_1_expected]
+----
+RETURN CASE WHEN 1 = 2 THEN 3 END, CASE WHEN 1 = 2 THEN 3 ELSE 4 END, CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 END, CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 ELSE 7 END
+----
+
+=== `CASE` abbreviations (which aren't `COALESCE` or `NVL`)
+
+The input
+
+[source,sql,id=t7_2,name=select_with_string_functions]
+----
+SELECT
+    nullif(1, 2),
+    nvl2(1, 2, 3)
+----
+
+will be transpiled to
+
+[source,cypher,id=t7_2_expected]
+----
+RETURN CASE WHEN 1 = 2 THEN NULL ELSE 1 END, CASE WHEN 1 IS NOT NULL THEN 2 ELSE 3 END
 ----
