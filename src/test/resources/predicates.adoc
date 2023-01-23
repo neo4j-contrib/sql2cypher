@@ -51,7 +51,7 @@ The input
 SELECT 1 FROM p WHERE 1 = 1 AND 2 > 1 AND 1 < 2 AND 1 <= 2 AND 2 >= 1 AND 1 != 2
 ----
 
-will be trtanspiled to
+will be transpiled to
 
 [source,cypher,id=t2_0_expected]
 ----
@@ -62,5 +62,24 @@ WHERE (1 = 1
   AND 1 <= 2
   AND 2 >= 1
   AND 1 <> 2)
+RETURN 1
+----
+
+== Null Handling
+
+The input
+
+[source,sql,id=t3_0,name=predicates_nullability]
+----
+SELECT 1 FROM p WHERE 1 IS NULL AND 2 IS NOT NULL
+----
+
+will be transpiled to
+
+[source,cypher,id=t3_0_expected]
+----
+MATCH (:p)
+WHERE (1 IS NULL
+  AND 2 IS NOT NULL)
 RETURN 1
 ----

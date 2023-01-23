@@ -385,6 +385,12 @@ public final class Translator {
 		else if (c instanceof QOM.Ne<?> e) {
 			return expression(e.$arg1()).ne(expression(e.$arg2()));
 		}
+		else if (c instanceof QOM.IsNull e) {
+			return expression(e.$arg1()).isNull();
+		}
+		else if (c instanceof QOM.IsNotNull e) {
+			return expression(e.$arg1()).isNotNull();
+		}
 		else {
 			throw new IllegalArgumentException("unsupported: " + c);
 		}
