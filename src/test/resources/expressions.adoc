@@ -177,11 +177,6 @@ RETURN
     toUpper('abc')
 ----
 
-Cypher-DSL doesn't yet support all of these:
-- From: `SELECT left('abc', 2), ltrim(' abc '), replace('abc', 'b'), replace('abc', 'b', 'x'), reverse('abc'), right('abc', 2), rtrim(' abc '), substring('abc', 2), substring('abc', 2, 2), lower('abc'), cast(3 as varchar), upper('abc'), trim(' abc ')`
-- To: `RETURN left('abc', 2), ltrim(' abc '), replace('abc', 'b', ''), replace('abc', 'b', 'x'), reverse('abc'), right('abc', 2), rtrim(' abc '), substring('abc', (2 - 1)), substring('abc', (2 - 1), 2), toLower('abc'), toString(3), toUpper('abc'), trim(' abc ')`
-
-
 
 == Scalar functions
 
