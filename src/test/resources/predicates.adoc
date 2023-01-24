@@ -65,6 +65,25 @@ WHERE (1 = 1
 RETURN 1
 ----
 
+=== Between
+
+Between in SQL is inclusive
+
+[source,sql,id=t2_1,name=predicate_between]
+----
+SELECT 1 FROM p WHERE 2 BETWEEN 1 AND 3
+----
+
+will be transpiled to.
+There is a shorter form in Cypher (`1 <= 2 <= 3`) but that's parsed into `AND` form.
+
+[source,cypher,id=t2_1_expected]
+----
+MATCH (:p)
+WHERE (1 <= 2) AND (2 <= 3)
+RETURN 1
+----
+
 == Null Handling
 
 The input

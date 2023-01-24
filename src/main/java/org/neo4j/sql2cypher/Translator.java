@@ -448,6 +448,10 @@ public final class Translator {
 		else if (c instanceof QOM.Le<?> e) {
 			return expression(e.$arg1()).lte(expression(e.$arg2()));
 		}
+		else if (c instanceof QOM.Between<?> e) {
+			return expression(e.$arg2()).lte(expression(e.$arg1()))
+					.and(expression(e.$arg1()).lte(expression(e.$arg3())));
+		}
 		else if (c instanceof QOM.Ne<?> e) {
 			return expression(e.$arg1()).ne(expression(e.$arg2()));
 		}
