@@ -304,35 +304,35 @@ public final class Translator {
 			return Functions.size(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Left e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return Functions.left(expression(e.$arg1()), expression(e.$arg2()));
 		}
 		else if (f instanceof QOM.Lower e) {
 			return org.neo4j.cypherdsl.core.Functions.toLower(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Ltrim e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return org.neo4j.cypherdsl.core.Functions.ltrim(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Replace e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return Functions.replace(expression(e.$arg1()), expression(e.$arg2()), expression(e.$arg3()));
 		}
 		else if (f instanceof QOM.Reverse e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return Functions.reverse(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Right e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return Functions.right(expression(e.$arg1()), expression(e.$arg2()));
 		}
 		else if (f instanceof QOM.Rtrim e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return org.neo4j.cypherdsl.core.Functions.rtrim(expression(e.$arg1()));
 		}
 		else if (f instanceof QOM.Substring e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			var length = expression(e.$arg3());
+			if (length != Cypher.literalNull()) {
+				return org.neo4j.cypherdsl.core.Functions.substring(expression(e.$arg1()), expression(e.$arg2()),
+						length);
+			}
+			else {
+				return org.neo4j.cypherdsl.core.Functions.substring(expression(e.$arg1()), expression(e.$arg2()), null);
+			}
 		}
 		else if (f instanceof QOM.Trim e) {
 			if (e.$arg2() != null) {
@@ -343,8 +343,7 @@ public final class Translator {
 			}
 		}
 		else if (f instanceof QOM.Upper e) {
-			// TODO: Support this in Cypher-DSL
-			throw unsupported(e);
+			return Functions.toUpper(expression(e.$arg1()));
 		}
 
 		// https://neo4j.com/docs/cypher-manual/current/functions/scalar/
@@ -409,7 +408,9 @@ public final class Translator {
 				throw unsupported(f);
 			}
 		}
-
+		else if (f instanceof QOM.Null || f == null) {
+			return Cypher.literalNull();
+		}
 		else {
 			throw unsupported(f);
 		}
