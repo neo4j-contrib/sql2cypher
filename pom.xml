@@ -170,6 +170,12 @@
 			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.neo4j</groupId>
+			<artifactId>neo4j-cypher-dsl-parser</artifactId>
+			<version>${neo4j-cypher-dsl.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
