@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: jOOQ/jOOQ
+          ref: version-3.18.0-sql2cypher
           path: jOOQ
 
       - name: 'Install jOOQ Snapshot'
