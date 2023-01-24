@@ -10,14 +10,24 @@ The input
 
 [source,sql,id=t1_0,name=select_with_arithmetic]
 ----
-SELECT 1 + 2, 1 - 2, 1 * 2, 1 / 2, square(2)
+SELECT
+    1 + 2,
+    1 - 2,
+    1 * 2,
+    1 / 2,
+    square(2)
 ----
 
 will be transpiled to
 
 [source,cypher,id=t1_0_expected]
 ----
-RETURN (1 + 2), (1 - 2), (1 * 2), (1 / 2), (2 * 2)
+RETURN
+    (1 + 2),
+    (1 - 2),
+    (1 * 2),
+    (1 / 2),
+    (2 * 2)
 ----
 
 == Numeric functions
@@ -28,14 +38,26 @@ The input
 
 [source,sql,id=t2_0,name=select_with_mathematical_functions]
 ----
-SELECT abs(1), ceil(1), floor(1), round(1), round(1, 1), sign(1)
+SELECT
+    abs(1),
+    ceil(1),
+    floor(1),
+    round(1),
+    round(1, 1),
+    sign(1)
 ----
 
 will be transpiled to
 
 [source,cypher,id=t2_0_expected]
 ----
-RETURN abs(1), ceil(1), floor(1), round(1), round(1, 1), sign(1)
+RETURN
+    abs(1),
+    ceil(1),
+    floor(1),
+    round(1),
+    round(1, 1),
+    sign(1)
 ----
 
 == Logarithmic functions
@@ -46,14 +68,24 @@ The input
 
 [source,sql,id=t3_0,name=select_with_logarithmic_functions]
 ----
-SELECT exp(1), ln(1), log(2, 1), log10(1), sqrt(1)
+SELECT
+    exp(1),
+    ln(1),
+    log(2, 1),
+    log10(1),
+    sqrt(1)
 ----
 
 will be transpiled to
 
 [source,cypher,id=t3_0_expected]
 ----
-RETURN exp(1), log(1), (log(1) / log(2)), log10(1), sqrt(1)
+RETURN
+    exp(1),
+    log(1),
+    (log(1) / log(2)),
+    log10(1),
+    sqrt(1)
 ----
 
 
@@ -65,14 +97,36 @@ The input
 
 [source,sql,id=t4_0,name=select_with_trigonometric_functions]
 ----
-SELECT acos(1), asin(1), atan(1), atan2(1, 2), cos(1), cot(1), degrees(1), pi(), radians(1), sin(1), tan(1)
+SELECT
+    acos(1),
+    asin(1),
+    atan(1),
+    atan2(1, 2),
+    cos(1),
+    cot(1),
+    degrees(1),
+    pi(),
+    radians(1),
+    sin(1),
+    tan(1)
 ----
 
 will be transpiled to
 
 [source,cypher,id=t4_0_expected]
 ----
-RETURN acos(1), asin(1), atan(1), atan2(1, 2), cos(1), cot(1), degrees(1), pi(), radians(1), sin(1), tan(1)
+RETURN
+    acos(1),
+    asin(1),
+    atan(1),
+    atan2(1, 2),
+    cos(1),
+    cot(1),
+    degrees(1),
+    pi(),
+    radians(1),
+    sin(1),
+    tan(1)
 ----
 
 
@@ -85,14 +139,22 @@ The input
 
 [source,sql,id=t5_0,name=select_with_string_functions]
 ----
-SELECT lower('abc'), cast(3 as varchar), trim(' abc '), length('abc')
+SELECT
+    lower('abc'),
+    cast(3 as varchar),
+    trim(' abc '),
+    length('abc')
 ----
 
 will be transpiled to
 
 [source,cypher,id=t5_0_expected]
 ----
-RETURN toLower('abc'), toString(3), trim(' abc '), size('abc')
+RETURN
+    toLower('abc'),
+    toString(3),
+    trim(' abc '),
+    size('abc')
 ----
 
 Cypher-DSL doesn't yet support all of these:
@@ -127,7 +189,18 @@ will be transpiled to
 
 [source,cypher,id=t6_0_expected]
 ----
-RETURN coalesce(1, 2), coalesce(1, 2, 3), coalesce(1, 2), toBoolean('1'), toFloat(1), toFloat(1), toFloat(1), toInteger(1), toInteger(1), toInteger(1), toInteger(1)
+RETURN
+    coalesce(1, 2),
+    coalesce(1, 2, 3),
+    coalesce(1, 2),
+    toBoolean('1'),
+    toFloat(1),
+    toFloat(1),
+    toFloat(1),
+    toInteger(1),
+    toInteger(1),
+    toInteger(1),
+    toInteger(1)
 ----
 
 
@@ -190,5 +263,7 @@ will be transpiled to
 
 [source,cypher,id=t7_2_expected]
 ----
-RETURN CASE WHEN 1 = 2 THEN NULL ELSE 1 END, CASE WHEN 1 IS NOT NULL THEN 2 ELSE 3 END
+RETURN
+    CASE WHEN 1 = 2 THEN NULL ELSE 1 END,
+    CASE WHEN 1 IS NOT NULL THEN 2 ELSE 3 END
 ----
