@@ -408,7 +408,13 @@ public final class Translator {
 				throw unsupported(f);
 			}
 		}
-		else if (f instanceof QOM.Null || f == null) {
+		else if (f instanceof org.jooq.True) {
+			return Cypher.literalTrue();
+		}
+		else if (f instanceof org.jooq.False) {
+			return Cypher.literalFalse();
+		}
+		else if (f instanceof QOM.Null || f == null || f instanceof org.jooq.Null) {
 			return Cypher.literalNull();
 		}
 		else {

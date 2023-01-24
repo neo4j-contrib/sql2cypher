@@ -4,6 +4,23 @@
 
 These tests cover column expressions.
 
+== Literal Values
+
+The input
+
+[source,sql,id=t0_0,name=select_literal_values]
+----
+SELECT
+    1, TRUE, FALSE, NULL
+----
+
+will be transpiled to
+
+[source,cypher,id=t0_0_expected]
+----
+RETURN 1, TRUE, FALSE, NULL
+----
+
 == Arithmetic expressions
 
 The input
