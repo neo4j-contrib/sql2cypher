@@ -37,6 +37,7 @@ import org.asciidoctor.extension.Treeprocessor;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.neo4j.cypherdsl.parser.CypherParser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -73,13 +74,14 @@ class TranslatorTest {
 			return Stream.empty();
 		}
 		return Arrays.stream(files).flatMap((file) -> getTestData(file.toPath()).stream()
-				.map((t) -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings())));
+				.map((t) -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings(), t.prettyPrint())));
 	}
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource
-	void simple(String name, String sql, String expected, Map<String, String> tableMappings) {
-		assertThat(Translator.with(TranslatorConfig.builder().withTableToLabelMappings(tableMappings).build())
+	void simple(String name, String sql, String expected, Map<String, String> tableMappings, boolean prettyPrint) {
+		assertThat(Translator.with(
+				TranslatorConfig.builder().withPrettyPrint(prettyPrint).withTableToLabelMappings(tableMappings).build())
 				.convert(sql)).isEqualTo(expected);
 	}
 
@@ -101,21 +103,29 @@ class TranslatorTest {
 			blocks.values().stream().filter((b) -> "sql".equals(b.getAttribute("language"))).map((sqlBlock) -> {
 				var name = (String) sqlBlock.getAttribute("name");
 				var sql = String.join("\n", sqlBlock.getLines());
-				var cypher = String.join("\n", blocks.get(sqlBlock.getId() + "_expected").getLines());
+				var cypherBlock = blocks.get(sqlBlock.getId() + "_expected");
+				var cypher = String.join("\n", cypherBlock.getLines());
 				Map<String, String> tableMappings = new HashMap<>();
 				if (sqlBlock.getAttribute("table_mappings") != null) {
 					tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(","))
 							.map(String::trim).map((s) -> s.split(":"))
 							.collect(Collectors.toMap((a) -> a[0], (a) -> a[1]));
 				}
-				return new TestData(name, sql, cypher, tableMappings);
+				boolean parseCypher = Boolean.parseBoolean(((String) cypherBlock.getAttribute("parseCypher", "true")));
+				boolean prettyPrint = true;
+				if (parseCypher) {
+					cypher = CypherParser.parse(cypher).getCypher();
+					prettyPrint = false;
+				}
+				return new TestData(name, sql, cypher, tableMappings, prettyPrint);
 			}).forEach(this.testData::add);
 			return document;
 		}
 
 	}
 
-	private record TestData(String name, String sql, String cypher, Map<String, String> tableMappings) {
+	private record TestData(String name, String sql, String cypher, Map<String, String> tableMappings,
+			boolean prettyPrint) {
 	}
 
 }

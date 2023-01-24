@@ -245,7 +245,11 @@ will be transpiled to
 
 [source,cypher,id=t7_1_expected]
 ----
-RETURN CASE WHEN 1 = 2 THEN 3 END, CASE WHEN 1 = 2 THEN 3 ELSE 4 END, CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 END, CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 ELSE 7 END
+RETURN
+    CASE WHEN 1 = 2 THEN 3 END,
+    CASE WHEN 1 = 2 THEN 3 ELSE 4 END,
+    CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 END,
+    CASE WHEN 1 = 2 THEN 3 WHEN 4 = 5 THEN 6 ELSE 7 END
 ----
 
 === `CASE` abbreviations (which aren't `COALESCE` or `NVL`)
