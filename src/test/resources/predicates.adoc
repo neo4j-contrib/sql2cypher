@@ -84,6 +84,19 @@ WHERE (1 <= 2) AND (2 <= 3)
 RETURN 1
 ----
 
+[source,sql,id=t2_2,name=predicate_between_symmetric]
+----
+SELECT 1 FROM p WHERE 2 BETWEEN SYMMETRIC 3 AND 1
+----
+
+[source,cypher,id=t2_2_expected]
+----
+MATCH (:p)
+WHERE (3 <= 2) AND (2 <= 1) OR (1 <= 2) AND (2 <= 3)
+RETURN 1
+----
+
+
 == Null Handling
 
 The input

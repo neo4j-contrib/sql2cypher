@@ -426,7 +426,7 @@ public final class Translator {
 		return new IllegalArgumentException("Unsupported SQL expression: " + p);
 	}
 
-	private Condition condition(org.jooq.Condition c) {
+	private <T> Condition condition(org.jooq.Condition c) {
 		if (c instanceof QOM.And a) {
 			return condition(a.$arg1()).and(condition(a.$arg2()));
 		}
@@ -455,8 +455,16 @@ public final class Translator {
 			return expression(e.$arg1()).lte(expression(e.$arg2()));
 		}
 		else if (c instanceof QOM.Between<?> e) {
-			return expression(e.$arg2()).lte(expression(e.$arg1()))
-					.and(expression(e.$arg1()).lte(expression(e.$arg3())));
+			if (e.$symmetric()) {
+				@SuppressWarnings("unchecked")
+				QOM.Between<T> t = (QOM.Between<T>) e;
+				return condition(t.$symmetric(false))
+						.or(condition(t.$symmetric(false).$arg2(t.$arg3()).$arg3(t.$arg2())));
+			}
+			else {
+				return expression(e.$arg2()).lte(expression(e.$arg1()))
+						.and(expression(e.$arg1()).lte(expression(e.$arg3())));
+			}
 		}
 		else if (c instanceof QOM.Ne<?> e) {
 			return expression(e.$arg1()).ne(expression(e.$arg2()));
