@@ -1,0 +1,41 @@
+:toc:
+
+= Tests for DML statements
+
+These tests cover SQL DML statements and their Cypher equivalents
+
+== Plain `DELETE`
+
+The input
+
+[source,sql,id=t0_0,name=delete]
+----
+DELETE FROM person
+----
+
+will be transpiled to
+
+[source,cypher,id=t0_0_expected]
+----
+MATCH (person:person)
+DELETE person
+----
+
+== `DELETE .. WHERE`
+
+The input
+
+[source,sql,id=t0_1,name=delete]
+----
+DELETE FROM person
+WHERE person.id = 1
+----
+
+will be transpiled to
+
+[source,cypher,id=t0_1_expected]
+----
+MATCH (person:person)
+WHERE person.id = 1
+DELETE person
+----

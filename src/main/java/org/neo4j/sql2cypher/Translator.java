@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -51,6 +52,7 @@ import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.cypherdsl.core.ResultStatement;
 import org.neo4j.cypherdsl.core.SortItem;
+import org.neo4j.cypherdsl.core.Statement;
 import org.neo4j.cypherdsl.core.StatementBuilder;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithWhere;
 import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReadingWithoutWhere;
@@ -86,9 +88,17 @@ public final class Translator {
 	// Unsure how thread safe this should be (wrt the node lookup table), but this here
 	// will do for the purpose of adding some tests
 	public String convert(String sql) {
-		Select<?> query = parse(sql);
-		ResultStatement statement = statement(query);
-		return render(statement);
+		Query query = parse(sql);
+
+		if (query instanceof Select<?> s) {
+			return render(statement(s));
+		}
+		else if (query instanceof QOM.Delete d) {
+			return render(statement(d));
+		}
+		else {
+			throw unsupported(query);
+		}
 	}
 
 	public DSLContext createDSLContext() {
@@ -106,16 +116,30 @@ public final class Translator {
 		return context;
 	}
 
-	private Select<?> parse(String sql) {
+	private Query parse(String sql) {
 		DSLContext dsl = createDSLContext();
 		Parser parser = dsl.parser();
-		return parser.parseSelect(sql);
+		return parser.parseQuery(sql);
 	}
 
-	private String render(ResultStatement statement) {
+	private String render(Statement statement) {
 		Renderer renderer = Renderer.getRenderer(
 				this.config.isPrettyPrint() ? Configuration.prettyPrinting() : Configuration.defaultConfig());
 		return renderer.render(statement);
+	}
+
+	Statement statement(QOM.Delete<?> d) {
+		Node e = (Node) tableToPatternElement().apply(d.$from());
+
+		// TODO: https://github.com/neo4j-contrib/cypher-dsl/issues/585
+		// We shouldn't need to label things like this, but otherwise, it's not possible
+		// to write an assertion as labels are generated randomly, currently.
+		e = e.named(d.$from().getName());
+		this.tables.put(d.$from(), e);
+		OngoingReadingWithoutWhere m1 = Cypher.match(e);
+		OngoingReadingWithWhere m2 = (d.$where() != null) ? m1.where(condition(d.$where()))
+				: (OngoingReadingWithWhere) m1;
+		return m2.delete(e.asExpression()).build();
 	}
 
 	ResultStatement statement(Select<?> x) {
@@ -128,11 +152,7 @@ public final class Translator {
 			return Cypher.returning(resultColumnsSupplier.get()).build();
 		}
 
-		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map((t) -> {
-			Node node = node(t);
-			this.tables.put(t, node);
-			return (PatternElement) node;
-		}).toList());
+		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(tableToPatternElement()).toList());
 
 		OngoingReadingWithWhere m2 = (x.$where() != null) ? m1.where(condition(x.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -149,6 +169,16 @@ public final class Translator {
 		}
 
 		return buildableStatement.build();
+	}
+
+	// TODO: Return Node once https://github.com/neo4j-contrib/cypher-dsl/issues/553 is
+	// available
+	private Function<? super Table<?>, PatternElement> tableToPatternElement() {
+		return t -> {
+			Node node = node(t);
+			this.tables.put(t, node);
+			return node;
+		};
 	}
 
 	private Expression expression(SelectFieldOrAsterisk t) {
