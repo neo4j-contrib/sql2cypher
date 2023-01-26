@@ -131,11 +131,6 @@ public final class Translator {
 	Statement statement(QOM.Delete<?> d) {
 		Node e = lookupNode(d.$from());
 
-		// TODO: https://github.com/neo4j-contrib/cypher-dsl/issues/585
-		// We shouldn't need to label things like this, but otherwise, it's not possible
-		// to write an assertion as labels are generated randomly, currently.
-		e = e.named(d.$from().getName());
-		this.tables.put(d.$from(), e);
 		OngoingReadingWithoutWhere m1 = Cypher.match(e);
 		OngoingReadingWithWhere m2 = (d.$where() != null) ? m1.where(condition(d.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -558,10 +553,10 @@ public final class Translator {
 
 	private Node node(Table<?> t) {
 		if (t instanceof TableAlias<?> ta) {
-			return node(ta.$aliased()).named(ta.$alias().last());
+			return Cypher.node(nodeName(ta.$aliased())).named(ta.$alias().last());
 		}
 		else {
-			return Cypher.node(nodeName(t));
+			return Cypher.node(nodeName(t)).named(t.getName());
 		}
 	}
 
