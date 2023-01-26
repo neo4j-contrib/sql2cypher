@@ -62,7 +62,7 @@ will be transpiled to
 
 [source,cypher,id=t1_2_expected]
 ----
-MATCH (:p)
+MATCH (p:p)
 WHERE 1 = 3 AND 2 = 4
 OR (1 < 3 OR 1 = 3 AND 2 < 4)
 OR (1 < 3 OR 1 = 3 AND 2 <= 4)
@@ -161,7 +161,7 @@ will be transpiled to
 
 [source,cypher,id=t4_0_expected]
 ----
-MATCH (:p)
+MATCH (p:p)
 WHERE
   (1 IS NULL AND 2 IS NULL)
   OR (3 IS NOT NULL AND 4 IS NOT NULL)

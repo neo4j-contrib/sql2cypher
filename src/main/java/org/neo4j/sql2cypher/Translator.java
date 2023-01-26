@@ -18,8 +18,6 @@ package org.neo4j.sql2cypher;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -78,8 +76,6 @@ public final class Translator {
 
 	private final TranslatorConfig config;
 
-	private final Map<Table<?>, Node> tables = new ConcurrentHashMap<>();
-
 	private Translator(TranslatorConfig config) {
 
 		this.config = config;
@@ -129,7 +125,7 @@ public final class Translator {
 	}
 
 	Statement statement(QOM.Delete<?> d) {
-		Node e = lookupNode(d.$from());
+		Node e = node(d.$from());
 
 		OngoingReadingWithoutWhere m1 = Cypher.match(e);
 		OngoingReadingWithWhere m2 = (d.$where() != null) ? m1.where(condition(d.$where()))
@@ -147,7 +143,7 @@ public final class Translator {
 			return Cypher.returning(resultColumnsSupplier.get()).build();
 		}
 
-		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::lookupNode).toList());
+		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::node).toList());
 
 		OngoingReadingWithWhere m2 = (x.$where() != null) ? m1.where(condition(x.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -211,7 +207,7 @@ public final class Translator {
 			}
 		}
 		else if (f instanceof TableField<?, ?> tf) {
-			return lookupNode(tf.getTable()).property(tf.getName());
+			return node(tf.getTable()).property(tf.getName());
 		}
 		else if (f instanceof QOM.Add<?> e) {
 			return expression(e.$arg1()).add(expression(e.$arg2()));
@@ -545,10 +541,6 @@ public final class Translator {
 		}
 
 		return result;
-	}
-
-	private <T extends Table<?>> Node lookupNode(T t) {
-		return this.tables.computeIfAbsent(t, this::node);
 	}
 
 	private Node node(Table<?> t) {
