@@ -98,7 +98,7 @@
 		<maven.compiler.release>${java.version}</maven.compiler.release>
 		<moditect-maven-plugin.version>1.0.0.RC2</moditect-maven-plugin.version>
 		<native.maven.plugin.version>0.9.18</native.maven.plugin.version>
-		<neo4j-cypher-dsl.version>2023.0.2</neo4j-cypher-dsl.version>
+		<neo4j-cypher-dsl.version>2023.1.0-SNAPSHOT</neo4j-cypher-dsl.version>
 		<picocli.version>4.7.0</picocli.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
