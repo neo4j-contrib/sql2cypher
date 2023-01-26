@@ -4,13 +4,17 @@
 
 JDK 17 and Maven is required. Please run to test and package the project:
 
-WARNING: For the time being, you need to install a snapshot version of https://github.com/jOOQ/jOOQ[jOOQ]
+WARNING: For the time being, you need to install a snapshot version of both https://github.com/jOOQ/jOOQ[jOOQ] and https://github.com/neo4j-contrib/cypher-dsl[cypher-dsl].
 
 [source,bash]
 ----
-git clone git@github.com:jOOQ/jOOQ.git
+git clone --depth 1 --branch version-3.18.0-sql2cypher git@github.com:jOOQ/jOOQ.git
 cd jOOQ
 mvn -DskipTests -pl jOOQ -pl jOOQ-meta -am install
+cd ..
+git clone --depth 1 git@github.com:neo4j-contrib/cypher-dsl.git
+cd cypher-dsl
+./mvnw -Dfast install -am -pl neo4j-cypher-dsl -pl neo4j-cypher-dsl-build/processor -pl neo4j-cypher-dsl-parser  -Drevision=2023.1.0 -Dchangelist=-SNAPSHOT
 ----
 
 [source,bash]

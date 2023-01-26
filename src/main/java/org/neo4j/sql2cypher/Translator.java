@@ -16,12 +16,11 @@
 package org.neo4j.sql2cypher;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -51,7 +50,6 @@ import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.Node;
-import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.cypherdsl.core.ResultStatement;
 import org.neo4j.cypherdsl.core.SortItem;
 import org.neo4j.cypherdsl.core.Statement;
@@ -80,7 +78,7 @@ public final class Translator {
 
 	private final TranslatorConfig config;
 
-	private final Map<Table<?>, Node> tables = new HashMap<>();
+	private final Map<Table<?>, Node> tables = new ConcurrentHashMap<>();
 
 	private Translator(TranslatorConfig config) {
 
@@ -131,7 +129,7 @@ public final class Translator {
 	}
 
 	Statement statement(QOM.Delete<?> d) {
-		Node e = (Node) tableToPatternElement().apply(d.$from());
+		Node e = lookupNode(d.$from());
 
 		// TODO: https://github.com/neo4j-contrib/cypher-dsl/issues/585
 		// We shouldn't need to label things like this, but otherwise, it's not possible
@@ -154,7 +152,7 @@ public final class Translator {
 			return Cypher.returning(resultColumnsSupplier.get()).build();
 		}
 
-		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(tableToPatternElement()).toList());
+		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::lookupNode).toList());
 
 		OngoingReadingWithWhere m2 = (x.$where() != null) ? m1.where(condition(x.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -171,16 +169,6 @@ public final class Translator {
 		}
 
 		return buildableStatement.build();
-	}
-
-	// TODO: Return Node once https://github.com/neo4j-contrib/cypher-dsl/issues/553 is
-	// available
-	private Function<? super Table<?>, PatternElement> tableToPatternElement() {
-		return t -> {
-			Node node = node(t);
-			this.tables.put(t, node);
-			return node;
-		};
 	}
 
 	private Expression expression(SelectFieldOrAsterisk t) {
@@ -564,6 +552,10 @@ public final class Translator {
 		return result;
 	}
 
+	private <T extends Table<?>> Node lookupNode(T t) {
+		return this.tables.computeIfAbsent(t, this::node);
+	}
+
 	private Node node(Table<?> t) {
 		if (t instanceof TableAlias<?> ta) {
 			return node(ta.$aliased()).named(ta.$alias().last());
@@ -583,17 +575,6 @@ public final class Translator {
 		}
 
 		return t.getName();
-	}
-
-	private Node lookupNode(Table<?> t) {
-		Node node = this.tables.get(t);
-
-		if (node != null) {
-			return node;
-		}
-		else {
-			return node(t);
-		}
 	}
 
 }
