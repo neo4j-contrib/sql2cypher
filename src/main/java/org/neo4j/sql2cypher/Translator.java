@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ import org.jooq.Parser;
 import org.jooq.QualifiedAsterisk;
 import org.jooq.Query;
 import org.jooq.QueryPart;
+import org.jooq.Row;
 import org.jooq.Select;
 import org.jooq.SelectField;
 import org.jooq.SelectFieldOrAsterisk;
@@ -505,9 +507,61 @@ public final class Translator {
 		else if (c instanceof QOM.IsNotNull e) {
 			return expression(e.$arg1()).isNotNull();
 		}
+		else if (c instanceof QOM.RowEq<?> e) {
+			Condition result = null;
+
+			for (int i = 0; i < e.$arg1().size(); i++) {
+				Condition r = expression(e.$arg1().field(i)).eq(expression(e.$arg2().field(i)));
+				result = (result != null) ? result.and(r) : r;
+			}
+
+			return result;
+		}
+		else if (c instanceof QOM.RowNe<?> e) {
+			Condition result = null;
+
+			for (int i = 0; i < e.$arg1().size(); i++) {
+				Condition r = expression(e.$arg1().field(i)).ne(expression(e.$arg2().field(i)));
+				result = (result != null) ? result.and(r) : r;
+			}
+
+			return result;
+		}
+		else if (c instanceof QOM.RowGt<?> e) {
+			return rowCondition(e.$arg1(), e.$arg2(), Expression::gt, Expression::gt);
+		}
+		else if (c instanceof QOM.RowGe<?> e) {
+			return rowCondition(e.$arg1(), e.$arg2(), Expression::gt, Expression::gte);
+		}
+		else if (c instanceof QOM.RowLt<?> e) {
+			return rowCondition(e.$arg1(), e.$arg2(), Expression::lt, Expression::lt);
+		}
+		else if (c instanceof QOM.RowLe<?> e) {
+			return rowCondition(e.$arg1(), e.$arg2(), Expression::lt, Expression::lte);
+		}
+		else if (c instanceof QOM.RowIsNull e) {
+			return e.$arg1().$fields().stream().map(f -> expression(f).isNull()).reduce(Condition::and).get();
+		}
+		else if (c instanceof QOM.RowIsNotNull e) {
+			return e.$arg1().$fields().stream().map(f -> expression(f).isNotNull()).reduce(Condition::and).get();
+		}
 		else {
 			throw unsupported(c);
 		}
+	}
+
+	private Condition rowCondition(Row r1, Row r2,
+			BiFunction<? super Expression, ? super Expression, ? extends Condition> comp,
+			BiFunction<? super Expression, ? super Expression, ? extends Condition> last) {
+		Condition result = last.apply(expression(r1.field(r1.size() - 1)), expression(r2.field(r1.size() - 1)));
+
+		for (int i = r1.size() - 2; i >= 0; i--) {
+			Expression e1 = expression(r1.field(i));
+			Expression e2 = expression(r2.field(i));
+			result = comp.apply(e1, e2).or(e1.eq(e2).and(result));
+		}
+
+		return result;
 	}
 
 	private Node node(Table<?> t) {
