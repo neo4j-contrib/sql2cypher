@@ -18,8 +18,6 @@ package org.neo4j.sql2cypher;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -78,8 +76,6 @@ public final class Translator {
 
 	private final TranslatorConfig config;
 
-	private final Map<Table<?>, Node> tables = new ConcurrentHashMap<>();
-
 	private Translator(TranslatorConfig config) {
 
 		this.config = config;
@@ -129,13 +125,8 @@ public final class Translator {
 	}
 
 	Statement statement(QOM.Delete<?> d) {
-		Node e = lookupNode(d.$from());
+		Node e = node(d.$from());
 
-		// TODO: https://github.com/neo4j-contrib/cypher-dsl/issues/585
-		// We shouldn't need to label things like this, but otherwise, it's not possible
-		// to write an assertion as labels are generated randomly, currently.
-		e = e.named(d.$from().getName());
-		this.tables.put(d.$from(), e);
 		OngoingReadingWithoutWhere m1 = Cypher.match(e);
 		OngoingReadingWithWhere m2 = (d.$where() != null) ? m1.where(condition(d.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -152,7 +143,7 @@ public final class Translator {
 			return Cypher.returning(resultColumnsSupplier.get()).build();
 		}
 
-		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::lookupNode).toList());
+		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::node).toList());
 
 		OngoingReadingWithWhere m2 = (x.$where() != null) ? m1.where(condition(x.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -216,7 +207,7 @@ public final class Translator {
 			}
 		}
 		else if (f instanceof TableField<?, ?> tf) {
-			return lookupNode(tf.getTable()).property(tf.getName());
+			return node(tf.getTable()).property(tf.getName());
 		}
 		else if (f instanceof QOM.Add<?> e) {
 			return expression(e.$arg1()).add(expression(e.$arg2()));
@@ -552,16 +543,12 @@ public final class Translator {
 		return result;
 	}
 
-	private <T extends Table<?>> Node lookupNode(T t) {
-		return this.tables.computeIfAbsent(t, this::node);
-	}
-
 	private Node node(Table<?> t) {
 		if (t instanceof TableAlias<?> ta) {
-			return node(ta.$aliased()).named(ta.$alias().last());
+			return Cypher.node(nodeName(ta.$aliased())).named(ta.$alias().last());
 		}
 		else {
-			return Cypher.node(nodeName(t));
+			return Cypher.node(nodeName(t)).named(t.getName());
 		}
 	}
 

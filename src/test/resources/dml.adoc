@@ -39,3 +39,37 @@ MATCH (person:person)
 WHERE person.id = 1
 DELETE person
 ----
+
+== Plain `DELETE` with alias
+
+The input
+
+[source,sql,id=t0_2,name=delete]
+----
+DELETE FROM person p
+----
+
+will be transpiled to
+
+[source,cypher,id=t0_2_expected]
+----
+MATCH (p:person)
+DELETE p
+----
+
+== Plain `DELETE` with alias and table mapping
+
+The input
+
+[source,sql,id=t0_3,name=delete,table_mappings=person:Person]
+----
+DELETE FROM person p
+----
+
+will be transpiled to
+
+[source,cypher,id=t0_3_expected]
+----
+MATCH (p:Person)
+DELETE p
+----
