@@ -559,8 +559,10 @@ public final class Translator {
 			var relType = eq.$arg1().getQualifiedName().last();
 			Table<?> t1 = ta.$table1();
 			Table<?> t2 = ta.$table2();
-			System.out.println("t1 = " + Arrays.toString(t1.getQualifiedName().getName()));
-			System.out.println("t2 = " + Arrays.toString(t2.getQualifiedName().getName()));
+			// System.out.println("t1 = " +
+			// Arrays.toString(t1.getQualifiedName().getName()));
+			// System.out.println("t2 = " +
+			// Arrays.toString(t2.getQualifiedName().getName()));
 			if (/* mightBeNodeLabel(t1.$name().first()) && */ resolveTableOrJoin(t1) instanceof Node from
 					/* && mightBeNodeLabel(t2.$name().first()) */ && resolveTableOrJoin(t2) instanceof Node to
 					&& mightBeRelationshipType(relType) // upper-case-column-name
