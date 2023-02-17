@@ -48,6 +48,8 @@ import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.Node;
+import org.neo4j.cypherdsl.core.PatternElement;
+import org.neo4j.cypherdsl.core.Relationship;
 import org.neo4j.cypherdsl.core.ResultStatement;
 import org.neo4j.cypherdsl.core.SortItem;
 import org.neo4j.cypherdsl.core.Statement;
@@ -125,7 +127,7 @@ public final class Translator {
 	}
 
 	Statement statement(QOM.Delete<?> d) {
-		Node e = node(d.$from());
+		Node e = (Node) resolveTableOrJoin(d.$from());
 
 		OngoingReadingWithoutWhere m1 = Cypher.match(e);
 		OngoingReadingWithWhere m2 = (d.$where() != null) ? m1.where(condition(d.$where()))
@@ -143,7 +145,7 @@ public final class Translator {
 			return Cypher.returning(resultColumnsSupplier.get()).build();
 		}
 
-		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::node).toList());
+		OngoingReadingWithoutWhere m1 = Cypher.match(x.$from().stream().map(this::resolveTableOrJoin).toList());
 
 		OngoingReadingWithWhere m2 = (x.$where() != null) ? m1.where(condition(x.$where()))
 				: (OngoingReadingWithWhere) m1;
@@ -169,8 +171,8 @@ public final class Translator {
 		else if (t instanceof Asterisk) {
 			return Cypher.asterisk();
 		}
-		else if (t instanceof QualifiedAsterisk q) {
-			return node(q.$table()).getSymbolicName().orElseGet(() -> Cypher.name(q.$table().getName()));
+		else if (t instanceof QualifiedAsterisk q && resolveTableOrJoin(q.$table()) instanceof Node node) {
+			return node.getSymbolicName().orElseGet(() -> Cypher.name(q.$table().getName()));
 		}
 		else {
 			throw unsupported(t);
@@ -207,7 +209,16 @@ public final class Translator {
 			}
 		}
 		else if (f instanceof TableField<?, ?> tf) {
-			return node(tf.getTable()).property(tf.getName());
+			var pe = resolveTableOrJoin(tf.getTable());
+			if (pe instanceof Node node) {
+				return node.property(tf.getName());
+			}
+			else if (pe instanceof Relationship rel) {
+				return rel.property(tf.getName());
+			}
+			else {
+				throw unsupported(tf);
+			}
 		}
 		else if (f instanceof QOM.Add<?> e) {
 			return expression(e.$arg1()).add(expression(e.$arg2()));
@@ -543,13 +554,51 @@ public final class Translator {
 		return result;
 	}
 
-	private Node node(Table<?> t) {
+	private PatternElement resolveTableOrJoin(Table<?> t) {
+		if (t instanceof QOM.Join<?> ta && ta.$on() instanceof QOM.Eq<?> eq) {
+			var relType = eq.$arg1().getQualifiedName().last();
+			Table<?> t1 = ta.$table1();
+			Table<?> t2 = ta.$table2();
+			// System.out.println("t1 = " +
+			// Arrays.toString(t1.getQualifiedName().getName()));
+			// System.out.println("t2 = " +
+			// Arrays.toString(t2.getQualifiedName().getName()));
+			if (/* mightBeNodeLabel(t1.$name().first()) && */ resolveTableOrJoin(t1) instanceof Node from
+					/* && mightBeNodeLabel(t2.$name().first()) */ && resolveTableOrJoin(t2) instanceof Node to
+					&& mightBeRelationshipType(relType) // upper-case-column-name
+			) {
+				// todo check against primary key
+				// var targetIsId = eq.$arg2().getQualifiedName().last().equals("id");
+				return from.relationshipTo(to, relType);
+			}
+			else {
+				throw unsupported(ta);
+			}
+		}
+
 		if (t instanceof TableAlias<?> ta) {
-			return Cypher.node(nodeName(ta.$aliased())).named(ta.$alias().last());
+			if (resolveTableOrJoin(ta.$aliased()) instanceof Node node) {
+				return Cypher.node(nodeName(ta.$aliased())).named(ta.$alias().last());
+			}
+			else {
+				throw unsupported(ta);
+			}
 		}
 		else {
 			return Cypher.node(nodeName(t)).named(t.getName());
 		}
+	}
+
+	// via naming convention or via mapping configuration
+	private static boolean mightBeRelationshipType(String relType) {
+		System.out.println("relType = " + relType);
+		return relType.matches("^[A-Z]+(_[A-Z]+)*$");
+	}
+
+	// via naming convention or via mapping configuration
+	private static boolean mightBeNodeLabel(String label) {
+		System.out.println("label = " + label);
+		return label.matches("^[A-Z][a-z]+([A-Z][a-z]+)*$");
 	}
 
 	private String nodeName(Table<?> t) {

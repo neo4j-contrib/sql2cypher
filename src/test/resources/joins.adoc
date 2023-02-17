@@ -1,0 +1,45 @@
+:toc:
+
+= Joins to represent relationships
+
+These tests cover `ON JOIN` syntax to represent relationships
+
+== Foreign Key Joins
+
+The input
+
+[source,sql,id=t1_0,name=foreign_key_join]
+----
+SELECT p.name, m.title
+FROM `Person` as p
+JOIN `Movie` as m ON (p.`DIRECTED` = m.id)
+----
+
+will be transpiled to
+
+[source,cypher,id=t1_0_expected]
+----
+MATCH (p:Person)-[:DIRECTED]->(m:Movie)
+RETURN p.name, m.title
+----
+////
+== Join Table Joins
+
+The input
+
+[source,sql,id=t2_0,name=join_table_join]
+----
+SELECT p.name, m.title
+FROM `Person` AS p
+JOIN ACTED_IN AS r ON (p.id = r.person_id)
+JOIN `Movie` AS m ON (r.movie_id = m.id)
+----
+
+will be transpiled to
+
+[source,cypher,id=t2_0_expected]
+----
+MATCH (p:Person)-[r:ACTED_IN]->(m:Movie)
+RETURN p.name, m.title
+----
+////
