@@ -8,7 +8,7 @@ WARNING: For the time being, you need to install a snapshot version of both http
 
 [source,bash]
 ----
-git clone --depth 1 --branch version-3.18.0-sql2cypher git@github.com:jOOQ/jOOQ.git
+git clone --depth 1 --branch stable-sql2cypher git@github.com:jOOQ/jOOQ.git
 cd jOOQ
 mvn -DskipTests -pl jOOQ -pl jOOQ-meta -am install
 cd ..
