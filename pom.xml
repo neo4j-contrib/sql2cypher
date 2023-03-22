@@ -84,7 +84,7 @@
 		<java.version>17</java.version>
 		<jdkFilePrefix>zulu17.40.19-ca-jdk${jdkVersion}</jdkFilePrefix>
 		<jdkVersion>17.0.6</jdkVersion>
-		<jooq.version>3.18.0-SNAPSHOT</jooq.version>
+		<jooq.version>3.19.0-SNAPSHOT</jooq.version>
 		<jreleaser-maven-plugin.version>1.4.0</jreleaser-maven-plugin.version>
 		<junit-jupiter.version>5.9.2</junit-jupiter.version>
 		<license-maven-plugin.version>4.2.rc2</license-maven-plugin.version>
