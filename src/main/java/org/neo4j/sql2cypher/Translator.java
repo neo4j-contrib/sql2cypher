@@ -41,7 +41,9 @@ import org.jooq.conf.ParseWithMetaLookups;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.jooq.impl.QOM;
+import org.jooq.impl.QOM.Insert;
 import org.jooq.impl.QOM.TableAlias;
+import org.jooq.impl.QOM.UnmodifiableList;
 import org.neo4j.cypherdsl.core.Case;
 import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Cypher;
@@ -95,6 +97,9 @@ public final class Translator {
 			return render(statement(d));
 		}
 		else if (query instanceof QOM.Truncate<?> t) {
+			return render(statement(t));
+		}
+		else if (query instanceof QOM.Insert<?> t) {
 			return render(statement(t));
 		}
 		else {
@@ -171,6 +176,14 @@ public final class Translator {
 		}
 
 		return buildableStatement.build();
+	}
+
+	Statement statement(QOM.Insert<?> insert) {
+		Table<?> table = insert.$into();
+		PatternElement patternElement = this.resolveTableOrJoin(table);
+		UnmodifiableList<? extends Field<?>> columns = insert.$columns();
+		Expression[] expressions = columns.stream().map(f -> f.getValue()).toArray(Expression[]::new);
+		return Cypher.create(patternElement).set(expressions).build();
 	}
 
 	private Expression expression(SelectFieldOrAsterisk t) {
