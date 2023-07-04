@@ -15,8 +15,6 @@
  */
 package org.neo4j.sql2cypher;
 
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -52,7 +50,6 @@ import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.PatternElement;
-import org.neo4j.cypherdsl.core.Property;
 import org.neo4j.cypherdsl.core.Relationship;
 import org.neo4j.cypherdsl.core.ResultStatement;
 import org.neo4j.cypherdsl.core.SortItem;
@@ -181,23 +178,23 @@ public final class Translator {
 	}
 
 	Statement statement(QOM.Insert<?> insert) {
-		Table<?> table = insert.$into();
+		var table = insert.$into();
 		// TODO handle if this resolves to something unexpectedly different
-		Node node = (Node) this.resolveTableOrJoin(table);
+		var node = (Node) this.resolveTableOrJoin(table);
 
 		var rows = insert.$values();
-		var cypherExpressions = new ArrayList<Expression>();
+		var columns = insert.$columns();
 
 		if (rows.size() == 1) {
-			var properties = insert.$columns().stream().map(f -> expression(table, f)).toArray(Property[]::new);
-			var r = rows.get(0);
-			for (int i = 0; i < properties.length; ++i) {
-				cypherExpressions.add(properties[i].to(expression(r.field(i))));
+			Object[] keysAndValues = new Object[columns.size() * 2];
+			var row = rows.get(0);
+			for (int i = 0; i < columns.size(); ++i) {
+				keysAndValues[i * 2] = columns.get(i).getName();
+				keysAndValues[i * 2 + 1] = expression(row.field(i));
 			}
-			return Cypher.create(node).set(cypherExpressions).build();
+			return Cypher.create(node.withProperties(keysAndValues)).build();
 		}
 		else {
-			var columns = insert.$columns();
 			var props = insert.$values().stream().map(row -> {
 				var result = new HashMap<String, Object>(columns.size());
 				for (int i = 0; i < columns.size(); ++i) {
@@ -240,39 +237,6 @@ public final class Translator {
 	private SortItem expression(SortField<?> s) {
 		return Cypher.sort(expression(s.$field()),
 				SortItem.Direction.valueOf(s.$sortOrder().name().toUpperCase(Locale.ROOT)));
-	}
-
-	/**
-	 * Turns a field into a property.
-	 * @param table the owning table
-	 * @param field the field that is most likely belonging to the table
-	 * @return a table field that has a table for sure
-	 */
-	private Property expression(Table<?> table, Field<?> field) {
-
-		if (field instanceof TableField<?, ?> tf && tf.getTable() != null) {
-			return (Property) expression(field);
-		}
-
-		var tf = (Field<?>) Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[] { TableField.class },
-				(proxy, method, args) -> {
-					if (method.getName().equals("getTable")) {
-						return table;
-					}
-					return method.invoke(field);
-				});
-
-		try {
-			return (Property) expression(tf);
-		}
-		catch (IllegalArgumentException iae) {
-			// it would be nice if there would be an API to checking if a field is
-			// somewhat named
-			if (iae.getMessage().contains("unknown field")) {
-				return ((Node) resolveTableOrJoin(table)).property(field.getQualifiedName().getName());
-			}
-			throw iae;
-		}
 	}
 
 	private Expression expression(Field<?> f) {
