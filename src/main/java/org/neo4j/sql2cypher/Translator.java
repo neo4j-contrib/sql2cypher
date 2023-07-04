@@ -16,6 +16,7 @@
 package org.neo4j.sql2cypher;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiFunction;
@@ -97,12 +98,15 @@ public final class Translator {
 		else if (query instanceof QOM.Truncate<?> t) {
 			return render(statement(t));
 		}
+		else if (query instanceof QOM.Insert<?> t) {
+			return render(statement(t));
+		}
 		else {
 			throw unsupported(query);
 		}
 	}
 
-	public DSLContext createDSLContext() {
+	private DSLContext createDSLContext() {
 
 		var settings = new DefaultConfiguration().settings().withParseNameCase(this.config.getParseNameCase())
 				.withRenderNameCase(this.config.getRenderNameCase())
@@ -173,6 +177,36 @@ public final class Translator {
 		return buildableStatement.build();
 	}
 
+	Statement statement(QOM.Insert<?> insert) {
+		var table = insert.$into();
+		// TODO handle if this resolves to something unexpectedly different
+		var node = (Node) this.resolveTableOrJoin(table);
+
+		var rows = insert.$values();
+		var columns = insert.$columns();
+
+		if (rows.size() == 1) {
+			Object[] keysAndValues = new Object[columns.size() * 2];
+			var row = rows.get(0);
+			for (int i = 0; i < columns.size(); ++i) {
+				keysAndValues[i * 2] = columns.get(i).getName();
+				keysAndValues[i * 2 + 1] = expression(row.field(i));
+			}
+			return Cypher.create(node.withProperties(keysAndValues)).build();
+		}
+		else {
+			var props = insert.$values().stream().map(row -> {
+				var result = new HashMap<String, Object>(columns.size());
+				for (int i = 0; i < columns.size(); ++i) {
+					result.put(columns.get(i).getName(), expression(row.field(i)));
+				}
+				return Cypher.literalOf(result);
+			}).toList();
+			return Cypher.unwind(Cypher.listOf(props)).as("properties").create(node)
+					.set(node, Cypher.name("properties")).build();
+		}
+	}
+
 	private Expression expression(SelectFieldOrAsterisk t) {
 		if (t instanceof SelectField<?> s) {
 			return expression(s);
@@ -217,7 +251,7 @@ public final class Translator {
 				return Cypher.anonParameter(p.getValue());
 			}
 		}
-		else if (f instanceof TableField<?, ?> tf) {
+		else if (f instanceof TableField<?, ?> tf && tf.getTable() != null) {
 			var pe = resolveTableOrJoin(tf.getTable());
 			if (pe instanceof Node node) {
 				return node.property(tf.getName());
@@ -586,7 +620,7 @@ public final class Translator {
 		}
 
 		if (t instanceof TableAlias<?> ta) {
-			if (resolveTableOrJoin(ta.$aliased()) instanceof Node node) {
+			if (resolveTableOrJoin(ta.$aliased()) instanceof Node) {
 				return Cypher.node(nodeName(ta.$aliased())).named(ta.$alias().last());
 			}
 			else {
