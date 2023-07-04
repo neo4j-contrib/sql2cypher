@@ -73,3 +73,20 @@ will be transpiled to
 MATCH (p:Person)
 DELETE p
 ----
+
+== Truncate
+
+The input
+
+[source,sql,id=t0_4,name=truncate,table_mappings=people:Person]
+----
+TRUNCATE TABLE people
+----
+
+will be transpiled to
+
+[source,cypher,id=t0_4_expected]
+----
+MATCH (people:Person)
+DETACH DELETE people
+----

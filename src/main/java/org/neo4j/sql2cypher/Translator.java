@@ -91,8 +91,11 @@ public final class Translator {
 		if (query instanceof Select<?> s) {
 			return render(statement(s));
 		}
-		else if (query instanceof QOM.Delete d) {
+		else if (query instanceof QOM.Delete<?> d) {
 			return render(statement(d));
+		}
+		else if (query instanceof QOM.Truncate<?> t) {
+			return render(statement(t));
 		}
 		else {
 			throw unsupported(query);
@@ -133,6 +136,12 @@ public final class Translator {
 		OngoingReadingWithWhere m2 = (d.$where() != null) ? m1.where(condition(d.$where()))
 				: (OngoingReadingWithWhere) m1;
 		return m2.delete(e.asExpression()).build();
+	}
+
+	Statement statement(QOM.Truncate<?> t) {
+		Node e = (Node) resolveTableOrJoin(t.$table());
+
+		return Cypher.match(e).detachDelete(e.asExpression()).build();
 	}
 
 	ResultStatement statement(Select<?> x) {
@@ -591,13 +600,13 @@ public final class Translator {
 
 	// via naming convention or via mapping configuration
 	private static boolean mightBeRelationshipType(String relType) {
-		System.out.println("relType = " + relType);
+
 		return relType.matches("^[A-Z]+(_[A-Z]+)*$");
 	}
 
 	// via naming convention or via mapping configuration
 	private static boolean mightBeNodeLabel(String label) {
-		System.out.println("label = " + label);
+
 		return label.matches("^[A-Z][a-z]+([A-Z][a-z]+)*$");
 	}
 
