@@ -34,6 +34,7 @@ import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.ContentNode;
 import org.asciidoctor.ast.Document;
 import org.asciidoctor.extension.Treeprocessor;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -46,6 +47,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Michael Hunger
  */
 class TranslatorTest {
+
+	@Test
+	void namedParameterPrefixForParsingShouldBeConfigurable() {
+		var translator = Translator
+				.with(TranslatorConfig.builder().withParseNamedParamPrefix("$").withPrettyPrint(false).build());
+		assertThat(translator.convert("INSERT INTO Movie (Movie.title) VALUES($1)"))
+				.isEqualTo("CREATE (movie:`movie` {title: $1})");
+	}
 
 	static List<TestData> getTestData(Path path) {
 		try (var asciidoctor = Asciidoctor.Factory.create()) {

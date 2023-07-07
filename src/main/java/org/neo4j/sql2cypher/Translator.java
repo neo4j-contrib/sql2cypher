@@ -19,7 +19,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -112,6 +114,10 @@ public final class Translator {
 				.withRenderNameCase(this.config.getRenderNameCase())
 				.withParseWithMetaLookups(ParseWithMetaLookups.IGNORE_ON_FAILURE).withDiagnosticsLogging(true)
 				.withParseDialect(this.config.getSqlDialect());
+
+		Optional.ofNullable(this.config.getParseNamedParamPrefix()).filter(Predicate.not(String::isBlank))
+				.map(String::trim).ifPresent(settings::withParseNamedParamPrefix);
+
 		var context = DSL.using(this.config.getSqlDialect(), settings);
 		context.configuration().set(() -> {
 			var queries = this.config.getTableToLabelMappings().entrySet().stream()

@@ -62,6 +62,8 @@ public final class TranslatorConfig {
 
 	private final boolean prettyPrint;
 
+	private final String parseNamedParamPrefix;
+
 	private TranslatorConfig(Builder builder) {
 
 		this.parseNameCase = builder.parseNameCase;
@@ -70,6 +72,7 @@ public final class TranslatorConfig {
 		this.tableToLabelMappings = builder.tableToLabelMappings;
 		this.sqlDialect = builder.sqlDialect;
 		this.prettyPrint = builder.prettyPrint;
+		this.parseNamedParamPrefix = builder.parseNamedParamPrefix;
 	}
 
 	/**
@@ -104,6 +107,10 @@ public final class TranslatorConfig {
 		return this.prettyPrint;
 	}
 
+	public String getParseNamedParamPrefix() {
+		return this.parseNamedParamPrefix;
+	}
+
 	/**
 	 * A builder to create new instances of {@link TranslatorConfig configurations}.
 	 */
@@ -121,23 +128,28 @@ public final class TranslatorConfig {
 
 		private boolean prettyPrint;
 
+		private String parseNamedParamPrefix;
+
 		private Builder() {
-			this(ParseNameCase.LOWER_IF_UNQUOTED, RenderNameCase.LOWER, false, Map.of(), SQLDialect.DEFAULT, true);
+			this(ParseNameCase.LOWER_IF_UNQUOTED, RenderNameCase.LOWER, false, Map.of(), SQLDialect.DEFAULT, true,
+					null);
 		}
 
 		private Builder(TranslatorConfig config) {
 			this(config.parseNameCase, config.renderNameCase, config.jooqDiagnosticLogging, config.tableToLabelMappings,
-					config.sqlDialect, config.prettyPrint);
+					config.sqlDialect, config.prettyPrint, config.parseNamedParamPrefix);
 		}
 
 		private Builder(ParseNameCase parseNameCase, RenderNameCase renderNameCase, boolean jooqDiagnosticLogging,
-				Map<String, String> tableToLabelMappings, SQLDialect sqlDialect, boolean prettyPrint) {
+				Map<String, String> tableToLabelMappings, SQLDialect sqlDialect, boolean prettyPrint,
+				String parseNamedParamPrefix) {
 			this.parseNameCase = parseNameCase;
 			this.renderNameCase = renderNameCase;
 			this.jooqDiagnosticLogging = jooqDiagnosticLogging;
 			this.tableToLabelMappings = tableToLabelMappings;
 			this.sqlDialect = sqlDialect;
 			this.prettyPrint = prettyPrint;
+			this.parseNamedParamPrefix = parseNamedParamPrefix;
 		}
 
 		/**
@@ -198,6 +210,17 @@ public final class TranslatorConfig {
 		 */
 		public Builder withPrettyPrint(boolean prettyPrint) {
 			this.prettyPrint = prettyPrint;
+			return this;
+		}
+
+		/**
+		 * Changes the prefix used for parsing named parameters. If set to
+		 * {@literal null}, the jOOQ default ({@literal :}) is used.
+		 * @param parseNamedParamPrefix the new prefix for parsing named parameters
+		 * @return this builder
+		 */
+		public Builder withParseNamedParamPrefix(String parseNamedParamPrefix) {
+			this.parseNamedParamPrefix = parseNamedParamPrefix;
 			return this;
 		}
 
