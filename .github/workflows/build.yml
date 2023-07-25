@@ -37,16 +37,6 @@ jobs:
         working-directory: jOOQ
         run: mvn --no-transfer-progress -DskipTests -pl jOOQ -pl jOOQ-meta -am install
 
-      - name: 'Checkout Cypher-DSL'
-        uses: actions/checkout@v3
-        with:
-          repository: neo4j-contrib/cypher-dsl
-          path: cypher-dsl
-
-      - name: 'Install Cypher-DSL Snapshot'
-        working-directory: cypher-dsl
-        run: ./mvnw -Dfast install -am -pl neo4j-cypher-dsl -pl neo4j-cypher-dsl-build/processor -pl neo4j-cypher-dsl-parser  -Drevision=2023.1.0 -Dchangelist=-SNAPSHOT
-
       - name: 'Checkout'
         uses: actions/checkout@v3
         with:
