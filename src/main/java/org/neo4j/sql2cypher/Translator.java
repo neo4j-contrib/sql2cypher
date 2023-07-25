@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
@@ -26,6 +27,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.jooq.Asterisk;
+import org.jooq.CreateTableElementListStep;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Param;
@@ -48,11 +50,13 @@ import org.jooq.impl.QOM.TableAlias;
 import org.neo4j.cypherdsl.core.Case;
 import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Cypher;
+import org.neo4j.cypherdsl.core.ExposesRelationships;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.cypherdsl.core.Relationship;
+import org.neo4j.cypherdsl.core.RelationshipChain;
 import org.neo4j.cypherdsl.core.ResultStatement;
 import org.neo4j.cypherdsl.core.SortItem;
 import org.neo4j.cypherdsl.core.Statement;
@@ -108,6 +112,7 @@ public final class Translator {
 		}
 	}
 
+	@SuppressWarnings("ResultOfMethodCallIgnored")
 	private DSLContext createDSLContext() {
 
 		var settings = new DefaultConfiguration().settings().withParseNameCase(this.config.getParseNameCase())
@@ -120,9 +125,21 @@ public final class Translator {
 
 		var context = DSL.using(this.config.getSqlDialect(), settings);
 		context.configuration().set(() -> {
-			var queries = this.config.getTableToLabelMappings().entrySet().stream()
-					.map((e) -> (Query) DSL.createTable(e.getKey()).comment("label=" + e.getValue())).toList();
-			return context.meta(queries.toArray(Query[]::new));
+			var tables = new HashMap<String, Query>();
+
+			this.config.getJoinColumnsToTypeMappings().forEach((k, v) -> {
+				var tableAndColumnName = k.split("\\.");
+				var createTableStep = (CreateTableElementListStep) tables.computeIfAbsent(tableAndColumnName[0],
+						DSL::createTable);
+				createTableStep.column(DSL.field(tableAndColumnName[1]).comment("type=" + v));
+			});
+
+			this.config.getTableToLabelMappings().forEach((k, v) -> {
+				var createTableStep = (CreateTableElementListStep) tables.computeIfAbsent(k, DSL::createTable);
+				createTableStep.comment("label=" + v);
+			});
+
+			return context.meta(tables.values().toArray(Query[]::new));
 		});
 		return context;
 	}
@@ -604,54 +621,68 @@ public final class Translator {
 	}
 
 	private PatternElement resolveTableOrJoin(Table<?> t) {
-		if (t instanceof QOM.Join<?> ta && ta.$on() instanceof QOM.Eq<?> eq) {
-			var relType = eq.$arg1().getQualifiedName().last();
-			Table<?> t1 = ta.$table1();
-			Table<?> t2 = ta.$table2();
-			// System.out.println("t1 = " +
-			// Arrays.toString(t1.getQualifiedName().getName()));
-			// System.out.println("t2 = " +
-			// Arrays.toString(t2.getQualifiedName().getName()));
-			if (/* mightBeNodeLabel(t1.$name().first()) && */ resolveTableOrJoin(t1) instanceof Node from
-					/* && mightBeNodeLabel(t2.$name().first()) */ && resolveTableOrJoin(t2) instanceof Node to
-					&& mightBeRelationshipType(relType) // upper-case-column-name
-			) {
-				// todo check against primary key
-				// var targetIsId = eq.$arg2().getQualifiedName().last().equals("id");
-				return from.relationshipTo(to, relType);
+		if (t instanceof QOM.Join<?> join && join.$on() instanceof QOM.Eq<?> eq) {
+
+			String relType;
+			String relSymbolicName = null;
+
+			PatternElement lhs;
+			PatternElement rhs;
+
+			if (join.$table1() instanceof QOM.Join<?> lhsJoin) {
+				lhs = resolveTableOrJoin(lhsJoin.$table1());
+				relType = labelOrType(lhsJoin.$table2());
+				if (lhsJoin.$table2() instanceof TableAlias<?> tableAlias) {
+					relSymbolicName = tableAlias.getName();
+				}
 			}
 			else {
-				throw unsupported(ta);
+				lhs = resolveTableOrJoin(join.$table1());
+				relType = relationshipTypeName(eq.$arg2());
+			}
+
+			rhs = resolveTableOrJoin(join.$table2());
+
+			if (lhs instanceof ExposesRelationships<?> from && rhs instanceof Node to) {
+
+				var direction = Relationship.Direction.LTR;
+				if (join.$table2() instanceof TableAlias<?> ta
+						&& ta.$alias().last().equals(eq.$arg2().getQualifiedName().first())) {
+					direction = Relationship.Direction.RTL;
+				}
+
+				var relationship = from.relationshipWith(to, direction, relType);
+				if (relSymbolicName != null) {
+					if (relationship instanceof Relationship r) {
+						relationship = r.named(relSymbolicName);
+					}
+					else if (relationship instanceof RelationshipChain r) {
+						relationship = r.named(relSymbolicName);
+					}
+				}
+				return relationship;
+			}
+			else {
+				throw unsupported(join);
 			}
 		}
 
 		if (t instanceof TableAlias<?> ta) {
 			if (resolveTableOrJoin(ta.$aliased()) instanceof Node) {
-				return Cypher.node(nodeName(ta.$aliased())).named(ta.$alias().last());
+				return Cypher.node(labelOrType(ta.$aliased())).named(ta.$alias().last());
 			}
 			else {
 				throw unsupported(ta);
 			}
 		}
 		else {
-			return Cypher.node(nodeName(t)).named(t.getName());
+			return Cypher.node(labelOrType(t)).named(t.getName());
 		}
 	}
 
-	// via naming convention or via mapping configuration
-	private static boolean mightBeRelationshipType(String relType) {
+	private String labelOrType(Table<?> tableOrAlias) {
 
-		return relType.matches("^[A-Z]+(_[A-Z]+)*$");
-	}
-
-	// via naming convention or via mapping configuration
-	private static boolean mightBeNodeLabel(String label) {
-
-		return label.matches("^[A-Z][a-z]+([A-Z][a-z]+)*$");
-	}
-
-	private String nodeName(Table<?> t) {
-
+		var t = (tableOrAlias instanceof TableAlias<?> ta) ? ta.$aliased() : tableOrAlias;
 		var comment = t.getComment();
 		if (!comment.isBlank()) {
 			var config = Arrays.stream(comment.split(",")).map((s) -> s.split("="))
@@ -660,6 +691,11 @@ public final class Translator {
 		}
 
 		return t.getName();
+	}
+
+	private String relationshipTypeName(Field<?> lhsJoinColumn) {
+
+		return Objects.requireNonNull(lhsJoinColumn.getQualifiedName().last()).toUpperCase(Locale.ROOT);
 	}
 
 }
