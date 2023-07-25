@@ -601,6 +601,16 @@ public final class Translator {
 		else if (c instanceof QOM.RowIsNotNull e) {
 			return e.$arg1().$fields().stream().map(f -> expression(f).isNotNull()).reduce(Condition::and).get();
 		}
+		else if (c instanceof QOM.Like like) {
+			Expression rhs;
+			if (like.$arg2() instanceof Param p && p.$inline() && p.getValue() instanceof String s) {
+				rhs = Cypher.literalOf(s.replace("%", ".*"));
+			}
+			else {
+				rhs = expression(like.$arg2());
+			}
+			return expression(like.$arg1()).matches(rhs);
+		}
 		else {
 			throw unsupported(c);
 		}
