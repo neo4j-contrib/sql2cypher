@@ -34,10 +34,10 @@ import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.ContentNode;
 import org.asciidoctor.ast.Document;
 import org.asciidoctor.extension.Treeprocessor;
+import org.junit.jupiter.api.DynamicContainer;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.TestFactory;
 import org.neo4j.cypherdsl.parser.CypherParser;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,7 +70,8 @@ class TranslatorTest {
 		}
 	}
 
-	static Stream<Arguments> simple() {
+	@TestFactory
+	Stream<DynamicContainer> tck() {
 
 		var path = ClassLoader.getSystemResource("simple.adoc").getPath();
 		var parentFolder = new File(path).getParentFile();
@@ -82,13 +83,18 @@ class TranslatorTest {
 		if (files == null) {
 			return Stream.empty();
 		}
-		return Arrays.stream(files).flatMap((file) -> getTestData(file.toPath()).stream()
-				.map((t) -> Arguments.of(t.name(), t.sql(), t.cypher(), t.tableMappings(), t.prettyPrint())));
+
+		return Arrays.stream(files).map(file -> {
+			var tests = getTestData(file.toPath()).stream()
+					.map(t -> DynamicTest.dynamicTest(t.name,
+							() -> assertThatSqlIsTranslatedAsExpected(t.sql, t.cypher, t.tableMappings, t.prettyPrint)))
+					.toList();
+			return DynamicContainer.dynamicContainer(file.getName(), tests);
+		});
 	}
 
-	@ParameterizedTest(name = "{0}")
-	@MethodSource
-	void simple(String name, String sql, String expected, Map<String, String> tableMappings, boolean prettyPrint) {
+	void assertThatSqlIsTranslatedAsExpected(String sql, String expected, Map<String, String> tableMappings,
+			boolean prettyPrint) {
 		assertThat(Translator.with(
 				TranslatorConfig.builder().withPrettyPrint(prettyPrint).withTableToLabelMappings(tableMappings).build())
 				.convert(sql)).isEqualTo(expected);
@@ -116,7 +122,7 @@ class TranslatorTest {
 				var cypher = String.join("\n", cypherBlock.getLines());
 				Map<String, String> tableMappings = new HashMap<>();
 				if (sqlBlock.getAttribute("table_mappings") != null) {
-					tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(","))
+					tableMappings = Arrays.stream(((String) sqlBlock.getAttribute("table_mappings")).split(";"))
 							.map(String::trim).map((s) -> s.split(":"))
 							.collect(Collectors.toMap((a) -> a[0], (a) -> a[1]));
 				}
