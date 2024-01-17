@@ -1,3 +1,6 @@
+WARNING: This repository is achieved as of January 2024. We are very grateful towards https://www.datageekery.com and Lukas Eder for getting this up and running!
+         The content of this experimental work now lives on as part of the official https://github.com/neo4j/neo4j-jdbc[Neo4j JDBC Driver], see the https://github.com/neo4j/neo4j-jdbc/tree/main/neo4j-jdbc-translator[translator module].
+
 = Sql2Cypher Experimental Transpiler from SQL to Cypher
 
 This library is an experiment for converting SQL statements (first only read statements) to the appropriate Cypher equivalent.
